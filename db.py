@@ -5,6 +5,5 @@ uri = "mongodb://golang-spider:tZGjo1OZddxRtczjGQf6GRt8KUoo7dE7DcmZdLdhCIVv0aqDo
 client = pymongo.MongoClient(uri)
 print(client.database_names())
 db = client['Gateway']
-collection = db.collection_names(include_system_collections=False)
-for collect in collection:
-    print(collect)
+c = db.pages
+print(c.count())
