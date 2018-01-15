@@ -6,4 +6,9 @@ client = pymongo.MongoClient(uri)
 print(client.database_names())
 db = client['Gateway']
 c = db.pages
+<<<<<<< HEAD
 print(c.count())
+=======
+for page in c.find():
+    pprint.pprint(page)
+>>>>>>> e0b27b5a8af32572511157fbe774885356942e99
