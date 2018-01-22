@@ -29,3 +29,5 @@ def lambda_test(event,context):
     #cmctest()
     cctest()
     return event['test']
+
+cctest()
