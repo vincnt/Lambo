@@ -25,7 +25,7 @@ def cctest():
     pprint.pprint(data["Data"]["BTC"])
     #pprint.pprint(data)
 
-def lambda_test(event):
+def lambda_test(event,context):
     #cmctest()
     cctest()
-    print(event[1])
+    return event['test']
