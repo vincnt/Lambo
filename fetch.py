@@ -30,4 +30,3 @@ def lambda_test(event,context):
     cctest()
     return event['test']
 
-cctest()
