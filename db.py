@@ -7,6 +7,7 @@ print(client.database_names())
 db = client['Gateway']
 c = db.pages
 print(c.count())
-for page in c.find():
+'''for page in c.find():
     pprint.pprint(page)
+'''
 
