@@ -13,20 +13,20 @@ def cmctest():
     timez = int((data[1]["last_updated"]))
     print(datetime.datetime.fromtimestamp(timez).strftime('%c'))
 
+
 def cctest():
-    parameters = {}
-    response = requests.get("https://min-api.cryptocompare.com/data/all/coinlist", params=parameters)
-    print(response.status_code)
-    print("\n")
+    parameters = {"fsym": "ETH", "tsym": "BTC"}
+    response = requests.get("https://www.cryptocompare.com/api/data/coinsnapshot/", params=parameters)
+    print(str(response.status_code) + "\n")
     data = response.json()
-    print(data.keys())
-    pprint.pprint(data["Data"].keys())
-    print(len(data["Data"]))
-    pprint.pprint(data["Data"]["BTC"])
-    #pprint.pprint(data)
+    exchangedata = data["Data"]["Exchanges"]
+    for x in exchangedata:
+        pprint.pprint(x['MARKET'])
+
 
 def lambda_test(event,context):
     #cmctest()
     cctest()
     return event['test']
 
+wcctest()
