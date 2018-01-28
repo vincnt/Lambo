@@ -2,16 +2,16 @@ import requests
 import json
 import pprint
 import datetime
-
+import urllib.request
 
 # location of existing list of coins
-coinlist_location = "/home/vincent/Projects/Crypto/Lambo/coinlist.json"
+coinlist_location = "https://raw.githubusercontent.com/vincnt/Lambo/master/coinlist.json"
 
 
 # read coin file
 def read_current():
-    with open(coinlist_location) as currentlist:
-        data = json.load(currentlist)
+    with urllib.request.urlopen(coinlist_location) as url:
+        data = json.loads(url.read().decode())
         return data
 
 
