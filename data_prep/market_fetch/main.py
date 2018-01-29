@@ -39,16 +39,16 @@ def cc_price(cc_symbol):
     pprint.pprint(data)
 
 
-def market_finder(coinlist):
-    kulist=[]
+def market_finder(coinlist,market):
+    marketlist=[]
     for x in coinlist:
         if 'CC_markets' in coinlist[x]:
             if coinlist[x]['CC_markets']['BTC']:
-                if 'Kucoin' in coinlist[x]['CC_markets']["BTC"]:
-                    kulist.append(coinlist[x]['CMC_ID'])
-    print(kulist)
-    print(len(kulist))
-    return kulist
+                if market in coinlist[x]['CC_markets']["BTC"]:
+                    marketlist.append(coinlist[x]['CMC_ID'])
+    print(marketlist)
+    print(len(marketlist))
+    return marketlist
 
 
 def cap_finder(coinlist):
@@ -76,8 +76,8 @@ cc_symbol = coinlist["BTC"]["CC_symbol"]
 cc_price(cc_symbol)
 
 # get market cap of coins for an exchange (a few minutes accuracy)
-kulist = market_finder(coinlist)
-kulistd = cap_finder(kulist)
-sortedku = sorted(kulistd.items(), key=operator.itemgetter(1))
-for x in sortedku:
+marketlist = market_finder(coinlist, "Binance")
+marketlist_d = cap_finder(marketlist)
+sortedmarket = sorted(marketlist_d.items(), key=operator.itemgetter(1))
+for x in sortedmarket:
     print(x)
