@@ -4,6 +4,11 @@ import pprint
 import datetime
 import urllib.request
 import operator
+from google.cloud import bigquery
+import datetime
+import time
+import asyncio
+import aiohttp
 
 # location of existing list of coins
 coinlist_location = "https://raw.githubusercontent.com/vincnt/Lambo/master/coinlist.json"
@@ -32,13 +37,6 @@ def cmctest(coin):
     print(datetime.datetime.fromtimestamp(timez).strftime('%c'))
 
 
-def cc_price(cc_symbol):
-    parameters = {"fsym": cc_symbol, "tsyms": "BTC,USD,GBP"}
-    response = requests.get("https://min-api.cryptocompare.com/data/price", params=parameters)
-    data = response.json()
-    pprint.pprint(data)
-
-
 def market_finder(coinlist,market):
     marketlist=[]
     for x in coinlist:
@@ -63,11 +61,82 @@ def cap_finder(coinlist):
     return caplist
 
 
-def lambda_test(event,context):
+def bqtest(rows):
+    import os
+    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = '/home/vincent/Lambo-89cff3bde0ba.json'
+    bigquery_client = bigquery.Client()
+    dataset_ref = bigquery_client.dataset("test_coin")
+    table_ref = dataset_ref.table("prices")
+    # Get the table from the API so that the schema is available.
+    table = bigquery_client.get_table(table_ref)
+    errors = bigquery_client.insert_rows(table, rows)
+    if not errors:
+        print('Loaded succesfully into {}:{}'.format("test_coin", "prices"))
+    else:
+        print('Errors:')
+        pprint.pprint(errors)
 
-    return event['test']
+
+def getepochtime():
+    dts = datetime.datetime.utcnow()
+    epochtime = round(time.mktime(dts.timetuple()) + dts.microsecond/1e6)
+    return epochtime
 
 
+def cc_truecoinlist(truelist):
+    finallist = []
+    for x in truelist:
+        if "CC_symbol" in truelist[x]:
+            finallist.append(x)
+    return finallist
+
+
+async def fetch(session, coin):
+    params = {"fsym": coin, "tsyms": "BTC,USD,GBP,ETH"}
+    url = "https://min-api.cryptocompare.com/data/price"
+    with aiohttp.Timeout(60):
+        async with session.get(url, params=params) as response:
+            prices = await response.json()
+            result = {"CC_price":prices, "CMC_id": coin, "Time": getepochtime()}
+            return result
+
+
+async def fetch_all(session, coins, loop):
+    results = await asyncio.gather(
+        *[fetch(session, coin) for coin in coins],
+        return_exceptions=True  # default is false, that would raise
+    )
+    print(results)
+    newzlist=[]
+    for x in results:
+        try:
+            if "CC_price" in x:
+                if "BTC" in x["CC_price"]:
+                    newzlist.append(x)
+        except Exception:
+            pass
+    print(newzlist)
+    print(len(newzlist))
+    return newzlist
+
+
+loop = asyncio.get_event_loop()
+coinlist = read_local()
+cc_coinlist = cc_truecoinlist(coinlist)
+with aiohttp.ClientSession(loop=loop) as session:
+    the_results = loop.run_until_complete(
+        fetch_all(session, cc_coinlist, loop))
+print(the_results)
+justusdresults = []
+for x in the_results:
+    y = {'CC_price': x['CC_price']['USD'], 'CMC_ID': x['CMC_id'], 'Time': x['Time']}
+    justusdresults.append(y)
+print(justusdresults)
+print(len(justusdresults))
+bqtest(justusdresults)
+
+
+'''
 # Either read_local or read_current from github
 coinlist = read_local()
 
@@ -81,3 +150,40 @@ marketlist_d = cap_finder(marketlist)
 sortedmarket = sorted(marketlist_d.items(), key=operator.itemgetter(1))
 for x in sortedmarket:
     print(x)
+    '''
+
+
+def lambda_test(event,context):
+
+    return event['test']
+
+
+
+
+'''
+depreciated synchronous
+def testbqpriceadder(mylist):
+    pricearray = []
+    for x in mylist:
+        temp_dict = {}
+        if "CC_symbol" in coinlist[x]:
+            cc_symbol = coinlist[x]["CC_symbol"]
+            if 'USD' in cc_price(cc_symbol):
+                temp_dict['CC_price'] = float(cc_price(cc_symbol)['USD'])
+            else:
+                temp_dict['CC_price'] = None
+            temp_dict['CMC_ID'] = x
+            temp_dict['Time'] = getepochtime()
+            pricearray.append(temp_dict)
+    return pricearray
+'''
+
+
+'''
+depreciated synchronous
+def cc_price(cc_symbol):
+    parameters = {"fsym": cc_symbol, "tsyms": "BTC,USD,GBP"}
+    response = requests.get("https://min-api.cryptocompare.com/data/price", params=parameters)
+    data = response.json()
+    return data
+'''
