@@ -65,13 +65,13 @@ def bqtest(rows):
     #import os
     #os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = '/home/vincent/Lambo-89cff3bde0ba.json'
     bigquery_client = bigquery.Client()
-    dataset_ref = bigquery_client.dataset("test_coin")
-    table_ref = dataset_ref.table("prices")
+    dataset_ref = bigquery_client.dataset("Market_Fetch")
+    table_ref = dataset_ref.table("raw_prices")
     # Get the table from the API so that the schema is available.
     table = bigquery_client.get_table(table_ref)
     errors = bigquery_client.insert_rows(table, rows)
     if not errors:
-        print('Loaded succesfully into {}:{}'.format("test_coin", "prices"))
+        print('Loaded succesfully into {}:{}'.format("Market_Fetch", "raw_prices"))
     else:
         print('Errors:')
         pprint.pprint(errors)
@@ -92,12 +92,12 @@ def cc_truecoinlist(truelist):
 
 
 async def fetch(session, coin):
-    params = {"fsym": coin, "tsyms": "BTC,USD,GBP,ETH"}
+    params = {"fsym": coin, "tsyms": "BTC,USD,ETH"}
     url = "https://min-api.cryptocompare.com/data/price"
     with aiohttp.Timeout(30):
         async with session.get(url, params=params) as response:
             prices = await response.json()
-            result = {"CC_price":prices, "CMC_id": coin, "Time": getepochtime()}
+            result = {"CC_price": prices, "CMC_id": coin, "Time": getepochtime()}
             return result
 
 
@@ -140,7 +140,7 @@ for x in sortedmarket:
     '''
 
 
-def lambda_test(event,context):
+def lambda_test(event, context):
     loop = asyncio.get_event_loop()
     coinlist = read_current()
     cc_coinlist = cc_truecoinlist(coinlist)
@@ -150,12 +150,16 @@ def lambda_test(event,context):
     print(the_results)
     justusdresults = []
     for x in the_results:
-        y = {'CC_price': x['CC_price']['USD'], 'CMC_ID': x['CMC_id'], 'Time': x['Time']}
+        y = {
+            'CC_USD_PRICE': x['CC_price']['USD'],
+            'CC_BTC_PRICE': x['CC_price']['BTC'],
+            'CC_ETH_PRICE': x['CC_price']['ETH'],
+            'CMC_ID': x['CMC_id'],
+            'Timestamp': x['Time']}
         justusdresults.append(y)
     print(justusdresults)
-    print(len(justusdresults))
     bqtest(justusdresults)
-    return event['test']
+    return 'yay'  # event['test']
 
 
 
