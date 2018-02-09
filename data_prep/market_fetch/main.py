@@ -199,45 +199,10 @@ def lambda_test(event, context):
 
 
 '''
-# Either read_local or read_current from github
-coinlist = read_local()
-
-# get latest price for coin from CC (10 sec accuracy)
-cc_symbol = coinlist["BTC"]["CC_symbol"]
-cc_price(cc_symbol)
-
 # get market cap of coins for an exchange (a few minutes accuracy)
 marketlist = market_finder(coinlist, "Binance")
 marketlist_d = cap_finder(marketlist)
 sortedmarket = sorted(marketlist_d.items(), key=operator.itemgetter(1))
 for x in sortedmarket:
     print(x)
-    '''
-
-'''
-depreciated synchronous
-def testbqpriceadder(mylist):
-    pricearray = []
-    for x in mylist:
-        temp_dict = {}
-        if "CC_symbol" in coinlist[x]:
-            cc_symbol = coinlist[x]["CC_symbol"]
-            if 'USD' in cc_price(cc_symbol):
-                temp_dict['CC_price'] = float(cc_price(cc_symbol)['USD'])
-            else:
-                temp_dict['CC_price'] = None
-            temp_dict['CMC_ID'] = x
-            temp_dict['Time'] = getepochtime()
-            pricearray.append(temp_dict)
-    return pricearray
-'''
-
-
-'''
-depreciated synchronous
-def cc_price(cc_symbol):
-    parameters = {"fsym": cc_symbol, "tsyms": "BTC,USD,GBP"}
-    response = requests.get("https://min-api.cryptocompare.com/data/price", params=parameters)
-    data = response.json()
-    return data
 '''
