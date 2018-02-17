@@ -4,6 +4,7 @@ import pprint
 
 # location of existing list of coins
 coinlist_location = "coinlist.json"
+coinlistnames_location = "coinlistnames.json"
 
 
 # read coin file
@@ -17,6 +18,7 @@ def read_current():
 def write_new(newdata):
     with open(coinlist_location, 'w') as writer:
         json.dump(newdata, writer)
+
 
 
 # Retrieve coin data from CoinMarketCap and compiles new coins that are not in existing list
@@ -108,4 +110,5 @@ def general_update():
     print("Done!")
 
 
-general_update()
+#general_update()
+coinlistnames()
