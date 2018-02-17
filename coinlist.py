@@ -20,7 +20,6 @@ def write_new(newdata):
         json.dump(newdata, writer)
 
 
-
 # Retrieve coin data from CoinMarketCap and compiles new coins that are not in existing list
 def cmc_coin_fetch(currentdata):
     response = requests.get("https://api.coinmarketcap.com/v1/ticker/?limit=0")
