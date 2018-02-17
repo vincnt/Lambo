@@ -4,10 +4,12 @@ import time
 
 
 postarray_time_position = 10  # array index of the epoch time in a post
+timestep = 300  # 5 minutes
 
 
 def getlasttime(records_array):
     epoch = (records_array[0][postarray_time_position])
+    print((records_array[0][postarray_time_position]))
     print(epoch_to_utc(epoch))
     return epoch
 
@@ -16,23 +18,14 @@ def epoch_to_utc(x):
     return time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(x))
 
 
-def time_loop_creator(records, currentlast):
-    current = currentlast
-    timestep = current - 3600
+def fetchpasttimestep(records_array):
     newarray = []
-    while current>0:
-        for x in records:
-            if timestep < records[x][postarray_time_position] <= current:
-                newarray.append(records[x])
-            else:
-                current = timestep
-                timestep = currentlast - 3600
-    return
-
-
-def time_looper(start, end):
-    return
-
+    for x in records_array:
+        if x[postarray_time_position] > time.time()-timestep:
+            newarray.append(x)
+    return newarray
 
 records = redditdb.get_posts()
-currentlast = getlasttime(records)
+print(fetchpasttimestep(records))
+
+

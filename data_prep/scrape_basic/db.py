@@ -32,6 +32,7 @@ def get_comments():
 
     cursor.execute("SELECT * FROM reddit_replies ORDER BY createdutc")
     records = cursor.fetchall()
-    pprint.pprint(records)
+
     colnames = [desc[0] for desc in cursor.description]
     print(colnames)
+    return records
