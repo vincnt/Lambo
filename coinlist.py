@@ -97,7 +97,7 @@ def clean_slate():
 
 # main function
 def general_update():
-    # clean_slate()
+    clean_slate()
     currentdata = read_current()  # Read coin list
     newdata = cmc_coin_fetch(currentdata)  # Fetch from Coinmarketcap
     print("Markets will take a while to load...")
@@ -109,5 +109,4 @@ def general_update():
     print("Done!")
 
 
-#general_update()
-coinlistnames()
+general_update()
