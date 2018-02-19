@@ -25,7 +25,7 @@ def fetchpasttimestep(records_array):
             newarray.append(x)
     return newarray
 
-records = redditdb.get_posts()
-print(fetchpasttimestep(records))
+#records = redditdb.get_posts()
+#print(fetchpasttimestep(records))
 
 

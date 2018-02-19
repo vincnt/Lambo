@@ -9,7 +9,7 @@ def get_posts():
 
     # conn.cursor will return a cursor object, you can use this cursor to perform queries
     cursor = conn.cursor()
-    print("Connected!\n")
+    print("Connectd!\n")
     cursor.execute("select relname from pg_class where relkind='r' and relname !~ '^(pg_|sql_)';")
     print(cursor.fetchall())
 
@@ -36,3 +36,4 @@ def get_comments():
     colnames = [desc[0] for desc in cursor.description]
     print(colnames)
     return records
+
