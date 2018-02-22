@@ -1,11 +1,10 @@
-from data_prep.utils import postgres as redditdb
 import nltk
 import string
 import json
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
 from nltk import tokenize
 import pickle
-from data_prep.utils import timetools as timesort
+from utils import timetools as timesort, postgres as redditdb
 import time
 import pprint
 
@@ -58,7 +57,6 @@ def posttokeniser(testobject):
 
 def commenttokeniser(testobject, coinnames):
     testobject.texttoken = nltk.word_tokenize(testobject.text.translate(dict.fromkeys(string.punctuation)))
-    #testobject.texttoken = [word.lower() for word in testobject.texttoken if len(word) > 1 and word not in stop_words]
     testobject.texttokencoin = [word.lower() for word in testobject.texttoken if word.lower() in coinnames and word not in stop_words and word not in other_stop_words]
 
 
@@ -69,8 +67,8 @@ def freqcalc(x):
 def sentcalc(x):
     sid = SentimentIntensityAnalyzer()
     sentText = tokenize.sent_tokenize(x.text)
-    count=0
-    sent=0
+    count = 0
+    sent = 0
     for sentence in sentText:
         count +=1
         ss = sid.polarity_scores(sentence)
@@ -82,7 +80,7 @@ def sentcalc(x):
 
 def getcoinnames():
     coinnames = []
-    with open('/home/vincent/Projects/Crypto/Lambo/coinlist.json') as currentlist:
+    with open('/home/vincent/Projects/Crypto/Lambo/utils/coinlist.json') as currentlist:
         data = json.load(currentlist)
         for x in data:
             if int(data[x]['CMC_rank']) < 500:
@@ -102,68 +100,33 @@ def writepickle(objecttowrite):
 def readpickle():
     with open("commentarray", "rb") as commentarray:
         commentobjectarraynew = pickle.load(commentarray)
-        print('len of comment array (number of comments): ' + str(len(commentobjectarraynew)))
+        print('\nlen of comment array (number of comments): ' + str(len(commentobjectarraynew)) + '\n')
     return commentobjectarraynew
 
 
-def everything(coinnames):
+def fetch_analyse_write():
+    coinnames = getcoinnames()
     comments = redditdb.returnwholetable("reddit_replies")
     commentobjectarray = [RedditComment(*x) for x in comments]
-    print(len(commentobjectarray))
+    print("NLP might take a while. Number of comments processing: " + str(len(commentobjectarray)))
+    a = len(commentobjectarray)/100
+    b = 0
+    c = 0
     for x in commentobjectarray:
         commenttokeniser(x, coinnames)
         freqcalc(x)
         sentcalc(x)
+        b += 1
+        if b % a == 0:
+            c += 1
+            print(str(c)+"% completed.")
     writepickle(commentobjectarray)
 
 
-def analysis():
-    commentobjectarraynew = readpickle()
-    for x in range(1000):
-        if commentobjectarraynew[x].freqdist.most_common(10):
-            print(commentobjectarraynew[x].freqdist.most_common(10))
-            print(commentobjectarraynew[x].text)
-            print('ups: ' + str(commentobjectarraynew[x].ups))
-            print('downs: ' + str(commentobjectarraynew[x].downs))
-            print('sent: ' + str(commentobjectarraynew[x].sent))
-            print('createdepoch: ' + str(commentobjectarraynew[x].createdutc))
-            print('createdutc: ' + str(timesort.epoch_to_utc(commentobjectarraynew[x].createdutc)))
-            print('\n')
-
-
-def specanalysis(coin):
-    commentobjectarraynew = readpickle()
-    for x in range(46000):
-        templist = []
-        if commentobjectarraynew[x].freqdist.most_common(10):
-            for y in commentobjectarraynew[x].freqdist.most_common(10):
-                templist.append(y[0])
-            if coin in templist:
-                print(commentobjectarraynew[x].freqdist.most_common(10))
-                print(commentobjectarraynew[x].text)
-                print('ups: ' + str(commentobjectarraynew[x].ups))
-                print('downs: ' + str(commentobjectarraynew[x].downs))
-                print('sent: ' + str(commentobjectarraynew[x].sent))
-                print('subreddit: ' + str(commentobjectarraynew[x].subreddit))
-                print('createdepoch: ' + str(commentobjectarraynew[x].createdutc))
-                print('createdutc: ' + str(timesort.epoch_to_utc(commentobjectarraynew[x].createdutc)))
-                print('\n')
-
-
-def createarrayoftime():
-    currenttime = timesort.currenttime()
-    current = int(currenttime) - int(currenttime) % 3600
-    timearray = []
-    for x in range(300):
-        timearray.append(current)
-        current -= 3600
-    return timearray
-
-
-def coinsovertime(timee):
+def coinsovertime(commentobjectarray, timee):
     coindict = {}
-    commentobjectarraynew = readpickle()
-    for x in commentobjectarraynew:
+    # generate dictionary of coins and their epoch time blocks {'stellar':[123,456],'eth':[123,345]}
+    for x in commentobjectarray:
         if x.freqdist.most_common(10):
             mostcommon = x.freqdist.most_common(10)
             for coin in mostcommon:
@@ -171,18 +134,8 @@ def coinsovertime(timee):
                     coindict[coin[0]] = [x.createdutc]
                 elif coin[0] not in other_stop_words:
                     coindict[coin[0]].append(x.createdutc)
-    print('Dictionary of coins and the time blocks that they appear in: ')
-    print(coindict)
 
-    tempdictcount = []
-    for x in coindict:
-        temptuple = tuple([x, len(coindict[x])])
-        tempdictcount.append(temptuple)
-    tempdictcount.sort(key=lambda y: y[1], reverse=True)
-    print('\n Number of times each word is mentioned: ')
-    print(tempdictcount)
-    print('n')
-
+    # Creates new dictionary of coins with timeblocks and count in each timeblock {'stellar':{123:1,456,2}}
     newcoindict = {}
     for x in coindict:
         lasttimez = time.time()
@@ -195,33 +148,59 @@ def coinsovertime(timee):
                     if timez in newcoindict[x]:
                         newcoindict[x][timez] += 1
             lasttimez = timez
-    return newcoindict
+
+    # Counts how many times each coin is mentioned
+    coinscount = []
+    for x in coindict:
+        coinscount.append(tuple([x, len(coindict[x])]))
+    coinscount.sort(key=lambda y: y[1], reverse=True)
+
+    return newcoindict, coinscount
 
 
-def beep():
-    coinnames = getcoinnames()
-    everything(coinnames)  # fetches from db, does all the counting, and nltk calculations and writes to pickle
+def printcomments(coin, commentobjectarray):
+    for x in range(len(commentobjectarray)):
+        templist = []
+        if commentobjectarray[x].freqdist.most_common(10):
+            for y in commentobjectarray[x].freqdist.most_common(10):
+                templist.append(y[0])
+            if coin in templist:
+                print(commentobjectarray[x].freqdist.most_common(10))
+                print(commentobjectarray[x].text)
+                print('ups: ' + str(commentobjectarray[x].ups))
+                print('downs: ' + str(commentobjectarray[x].downs))
+                print('sent: ' + str(commentobjectarray[x].sent))
+                print('subreddit: ' + str(commentobjectarray[x].subreddit))
+                print('createdepoch: ' + str(commentobjectarray[x].createdutc))
+                print('createdutc: ' + str(timesort.epoch_to_utc(commentobjectarray[x].createdutc)))
+                print('\n')
 
 
-def boop():
-    timee = timesort.timearray_pastxintervals(3600, 300)  #c reate time array for coinsovertime
-    coinswithtime = coinsovertime(timee)  # generates coins over time
-
-    cointosearch = 'poly'
+def coinswithtimeprinter(coinswithtime, cointosearch):
     for x in coinswithtime[cointosearch]:
         print(str(timesort.epoch_to_utc(x))+": " + str(coinswithtime[cointosearch][x]))
 
-    #analysis()  # reads pickle, display examples of the comment text and their respective coin counts, sentiment, votes, creation time
-    specanalysis(cointosearch)  # analysis but for specific coin
+
+def coinmentionsprinter(coinscount):
+    print('\n Number of times each word is mentioned: ')
+    print(coinscount)
+    print('\n')
 
 
 def main():
     print(timesort.epoch_to_utc(time.time()))
-    boop()
+    # fetch_analyse_write()
+    coinarray = readpickle()
+    timearray = timesort.timearray_pastxintervals(3600, 100)  # create time array for coinsovertime (interval, length)
+    coinswithtime, coinscount = coinsovertime(coinarray, timearray)
+    coinmentionsprinter(coinscount)
+    #coinswithtimeprinter(coinswithtime, 'stellar')
+    #printcomments('poly', coinarray)
+
     print(timesort.epoch_to_utc(time.time()))
 
-
 main()
+
 
 '''
 records = redditb.get_posts()

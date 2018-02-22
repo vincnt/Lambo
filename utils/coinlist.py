@@ -1,22 +1,30 @@
 import requests
 import json
 import pprint
+import urllib.request
 
 # location of existing list of coins
-coinlist_location = "coinlist.json"
-coinlistnames_location = "coinlistnames.json"
+coinlist_location_local = "coinlist.json"
+coinlist_location_github = "https://raw.githubusercontent.com/vincnt/Lambo/master/coinlist.json"
 
 
 # read coin file
-def read_current():
-    with open(coinlist_location) as currentlist:
+def read_local():
+    with open(coinlist_location_local) as currentlist:
         data = json.load(currentlist)
+        return data
+
+
+# read coin file from online location (github)
+def read_github():
+    with urllib.request.urlopen(coinlist_location_github) as url:
+        data = json.loads(url.read().decode())
         return data
 
 
 # write final result to coin file
 def write_new(newdata):
-    with open(coinlist_location, 'w') as writer:
+    with open(coinlist_location_local, 'w') as writer:
         json.dump(newdata, writer)
 
 
@@ -98,7 +106,7 @@ def clean_slate():
 # main_aws function
 def general_update():
     clean_slate()
-    currentdata = read_current()  # Read coin list
+    currentdata = read_local()  # Read coin list
     newdata = cmc_coin_fetch(currentdata)  # Fetch from Coinmarketcap
     print("Markets will take a while to load...")
     newdata = cc_coin_fetch(newdata)  # Update from CryptoCompare
