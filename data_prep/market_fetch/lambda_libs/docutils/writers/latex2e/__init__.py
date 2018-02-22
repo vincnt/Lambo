@@ -636,7 +636,7 @@ PreambleCmds.rubric = r"""
   \subsubsection*{\centering\textit{\textmd{#1}}}}"""
 
 PreambleCmds.sidebar = r"""
-% sidebar (text outside the main text flow)
+% sidebar (text outside the main_aws text flow)
 \providecommand{\DUsidebar}[1]{%
   \begin{center}
     \colorbox[gray]{0.80}{\parbox{0.9\linewidth}{#1}}

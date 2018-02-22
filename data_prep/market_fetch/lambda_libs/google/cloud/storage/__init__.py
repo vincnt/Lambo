@@ -20,7 +20,7 @@ You'll typically use these to get started with the API:
     :start-after: [START storage_get_started]
     :end-before: [END storage_get_started]
 
-The main concepts with this API are:
+The main_aws concepts with this API are:
 
 - :class:`~google.cloud.storage.bucket.Bucket` which represents a particular
   bucket (akin to a mounted disk on a computer).

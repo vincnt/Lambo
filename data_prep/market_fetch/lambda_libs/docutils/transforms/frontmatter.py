@@ -4,7 +4,7 @@
 
 """
 Transforms related to the front matter of a document or a section
-(information found before the main text):
+(information found before the main_aws text):
 
 - `DocTitle`: Used to transform a lone top level section's title to
   the document title, promote a remaining lone top-level section's

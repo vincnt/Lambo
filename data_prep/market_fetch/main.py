@@ -89,7 +89,7 @@ def getepochtime():
     return epochtime
 
 
-# main fetch function
+# main_aws fetch function
 def fetch_runner(coinlist):
     loop = asyncio.get_event_loop()
     print("pre filtered coinlist length: " + str(len(coinlist)))

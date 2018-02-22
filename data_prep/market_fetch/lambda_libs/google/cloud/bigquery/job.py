@@ -475,7 +475,7 @@ class _AsyncJob(google.api_core.future.polling.PollingFuture):
     def _set_future_result(self):
         """Set the result or exception from the job if it is complete."""
         # This must be done in a lock to prevent the polling thread
-        # and main thread from both executing the completion logic
+        # and main_aws thread from both executing the completion logic
         # at the same time.
         with self._completion_lock:
             # If the operation isn't complete or if the result has already been

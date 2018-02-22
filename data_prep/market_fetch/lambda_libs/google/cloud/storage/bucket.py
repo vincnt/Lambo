@@ -1130,7 +1130,7 @@ class Bucket(_PropertyMixin):
         all public."
 
         :type main_page_suffix: str
-        :param main_page_suffix: The page to use as the main page
+        :param main_page_suffix: The page to use as the main_aws page
                                  of a directory.
                                  Typically something like index.html.
 

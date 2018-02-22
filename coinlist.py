@@ -95,7 +95,7 @@ def clean_slate():
         json.dump({}, writer)
 
 
-# main function
+# main_aws function
 def general_update():
     clean_slate()
     currentdata = read_current()  # Read coin list

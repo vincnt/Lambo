@@ -1671,7 +1671,7 @@ class Proto3Test(BaseTestCase):
       # deallocated the underlying message, but this is very difficult to detect
       # properly. The line below is likely to cause a segmentation fault.
       # With the Python implementation, old_map_value is just 'detached' from
-      # the main message. Using it will not crash of course, but since it still
+      # the main_aws message. Using it will not crash of course, but since it still
       # have a reference to the parent message I'm sure we can find interesting
       # ways to cause inconsistencies.
       self.assertEqual(15, old_map_value.c)

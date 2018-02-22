@@ -27,7 +27,7 @@ class Writer(Component):
     Each writer must support all standard node types listed in
     `docutils.nodes.node_class_names`.
 
-    The `write()` method is the main entry point.
+    The `write()` method is the main_aws entry point.
     """
 
     component_type = 'writer'

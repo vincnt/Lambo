@@ -72,7 +72,7 @@ class _timelex(object):
         the character set, so any continuous string of letters is considered
         one unit, any continuous string of numbers is considered one unit.
 
-        The main complication arises from the fact that dots ('.') can be used
+        The main_aws complication arises from the fact that dots ('.') can be used
         both as separators (e.g. "Sep.20.2009") or decimal points (e.g.
         "4:30:21.447"). As such, it is necessary to read the full context of
         any dot-separated strings before breaking it into tokens; as such, this
