@@ -1,11 +1,11 @@
-from data_prep.scrape_basic import db as redditdb
+from data_prep.utils import postgres as redditdb
 import nltk
 import string
 import json
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
 from nltk import tokenize
 import pickle
-from data_prep.scrape_basic import timesort
+from data_prep.utils import timetools as timesort
 import time
 import pprint
 
@@ -107,7 +107,7 @@ def readpickle():
 
 
 def everything(coinnames):
-    comments = redditdb.get_comments()
+    comments = redditdb.returnwholetable("reddit_replies")
     commentobjectarray = [RedditComment(*x) for x in comments]
     print(len(commentobjectarray))
     for x in commentobjectarray:
@@ -151,7 +151,8 @@ def specanalysis(coin):
 
 
 def createarrayoftime():
-    current = int(time.time()) - int(time.time()) % 3600
+    currenttime = timesort.currenttime()
+    current = int(currenttime) - int(currenttime) % 3600
     timearray = []
     for x in range(300):
         timearray.append(current)
@@ -203,7 +204,7 @@ def beep():
 
 
 def boop():
-    timee = createarrayoftime()  #c reate time array for coinsovertime
+    timee = timesort.timearray_pastxintervals(3600, 300)  #c reate time array for coinsovertime
     coinswithtime = coinsovertime(timee)  # generates coins over time
 
     cointosearch = 'poly'
