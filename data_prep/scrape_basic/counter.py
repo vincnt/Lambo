@@ -5,8 +5,11 @@ from nltk.sentiment.vader import SentimentIntensityAnalyzer
 from nltk import tokenize
 import pickle
 from utils import timetools as timesort, postgres as redditdb
+import matplotlib.dates
+import matplotlib.pyplot as plt
 import time
 import pprint
+import requests
 
 stop_words = set(nltk.corpus.stopwords.words('english'))
 other_stop_words = ['doge', 'part', 'rise', 'key', 'pay', 'etc', 'bot', 'moon', 'link', 'game', 'trust', 'data', 'fun', 'block', 'key', 'karma', 'via', 'decent', 'sub', 'get', 'time', 'change', 'life', 'ok']
@@ -176,9 +179,10 @@ def printcomments(coin, commentobjectarray):
                 print('\n')
 
 
-def coinswithtimeprinter(coinswithtime, cointosearch):
+def coinovertimeprinter(coinswithtime, cointosearch):
+    print('Printing mentions for '+cointosearch)
     for x in coinswithtime[cointosearch]:
-        print(str(timesort.epoch_to_utc(x))+": " + str(coinswithtime[cointosearch][x]))
+        print(str(x) + '  ' + str(timesort.epoch_to_utc(x))+": " + str(coinswithtime[cointosearch][x]))
 
 
 def coinmentionsprinter(coinscount):
@@ -187,17 +191,60 @@ def coinmentionsprinter(coinscount):
     print('\n')
 
 
+def grapher(coinswithtime, cointosearch):
+    cointime = []
+    coincount = []
+    for x in coinswithtime[cointosearch]:
+        cointime.append(matplotlib.dates.epoch2num(x))
+        coincount.append(coinswithtime[cointosearch][x])
+
+    response = requests.get("https://min-api.cryptocompare.com/data/histohour?fsym=LTC&tsym=USD&aggregate=1&limit=159")
+    data = response.json()
+    print(data['Data'])
+    coinprice = []
+    for x in cointime:
+        for y in data['Data']:
+            if x == matplotlib.dates.epoch2num(y['time']):
+                coinprice.append(y['open'])
+
+    print('coinprice')
+    print(coinprice)
+
+    coinprice = [((x-min(coinprice))/(max(coinprice)-min(coinprice))) for x in coinprice]
+    coincount = [(x-min(coincount))/(max(coincount)-min(coincount)) for x in coincount]
+    print(coincount)
+    print(coinprice)
+
+    fig, ax = plt.subplots()
+    # Plot the date using plot_date rather than plot
+    ax.plot_date(cointime, coincount, '--', label='coincount')
+    ax.plot_date(cointime, coinprice, '--', label='coinprice')
+    # Choose your xtick format string
+    date_fmt = '%d-%m %H:%M'
+    # Use a DateFormatter to set the data to the correct format.
+    date_formatter = matplotlib.dates.DateFormatter(date_fmt)
+    ax.xaxis.set_major_formatter(date_formatter)
+    # Sets the tick labels diagonal so they fit easier.
+    fig.autofmt_xdate()
+    ax.xaxis.set_major_locator(matplotlib.dates.MinuteLocator(interval=240))
+    fig.suptitle(cointosearch, fontsize=20)
+    ax.legend(loc='lower right')
+    plt.show()
+
+
 def main():
-    print(timesort.epoch_to_utc(time.time()))
+    print('Start time: ' + str(timesort.epoch_to_utc(time.time())) + '\n')
+
     # fetch_analyse_write()
     coinarray = readpickle()
-    timearray = timesort.timearray_pastxintervals(3600, 100)  # create time array for coinsovertime (interval, length)
+    timearray = timesort.timearray_pastxintervals(3600,160)  # create time array for coinsovertime (interval, length)
     coinswithtime, coinscount = coinsovertime(coinarray, timearray)
-    coinmentionsprinter(coinscount)
-    #coinswithtimeprinter(coinswithtime, 'stellar')
+    #coinmentionsprinter(coinscount)
+    coinovertimeprinter(coinswithtime, 'ltc')
     #printcomments('poly', coinarray)
+    grapher(coinswithtime, 'ltc')
+    print('\nEnd time: ' + str(timesort.epoch_to_utc(time.time())))
 
-    print(timesort.epoch_to_utc(time.time()))
 
 main()
 
