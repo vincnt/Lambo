@@ -1,5 +1,6 @@
 import psycopg2
 from utils import postgres_config as config
+from utils import timetools
 
 
 def connectdb():
@@ -35,5 +36,14 @@ def returnwholetable(table):
     return records
 
 
-# put in a return table from specified date function
+def tailtable(table):
+    conn = connectdb()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM " + table + " ORDER BY createdutc DESC LIMIT 10")
+    records=cursor.fetchall()
+    for x in records:
+        print(timetools.epoch_to_utc(int(x[7])))
+    return records
 
+
+# put in a return table from specified date function
