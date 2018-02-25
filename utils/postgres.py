@@ -30,8 +30,17 @@ def listcolumns(table):
 def returnwholetable(table):
     conn = connectdb()
     cursor = conn.cursor()
+    print("Fetching whole table - " + str(totalrowcount(table)) + " rows")
     cursor.execute("SELECT * FROM " + table + " ORDER BY createdutc DESC")
+    records = cursor.fetchall()
+    return records
+
+
+def returnwholetablefromtime(table, fromtime):
+    conn = connectdb()
+    cursor = conn.cursor()
     print("Fetching table... \n")
+    cursor.execute("SELECT * FROM " + table + " WHERE createdutc > " + str(fromtime) + " ORDER BY createdutc DESC")
     records = cursor.fetchall()
     return records
 
@@ -46,4 +55,23 @@ def tailtable(table):
     return records
 
 
+def dbsizeingb():
+    conn = connectdb()
+    cursor = conn.cursor()
+    cursor.execute("SELECT pg_database_size('reddit')")
+    records = cursor.fetchall()
+    return records[0][0]/1000000000
+
+
+def totalrowcount(table):
+    conn = connectdb()
+    cursor = conn.cursor()
+    cursor.execute("SELECT COUNT(*) FROM " + table)
+    records = cursor.fetchall()
+    return records
+
+
 # put in a return table from specified date function
+if __name__ == "__main__":
+    test = returnwholetable('reddit_replies')
+    print(test)

@@ -9,6 +9,7 @@ import matplotlib.dates
 import matplotlib.pyplot as plt
 import time
 import pprint
+from decimal import Decimal
 import requests
 
 stop_words = set(nltk.corpus.stopwords.words('english'))
@@ -103,8 +104,35 @@ def writepickle(objecttowrite):
 def readpickle():
     with open("commentarray", "rb") as commentarray:
         commentobjectarraynew = pickle.load(commentarray)
-        print('\nlen of comment array (number of comments): ' + str(len(commentobjectarraynew)) + '\n')
+        print('\nlen of pickle comment array that is being read in (number of comments): ' + str(len(commentobjectarraynew)) + '\n')
     return commentobjectarraynew
+
+
+def fetch_analyse_update():
+    coinnames = getcoinnames()
+    existingarray = readpickle()
+    lasttime = 0
+    for x in existingarray:
+        if x.createdutc > lasttime:
+            lasttime = x.createdutc
+    comments = redditdb.returnwholetablefromtime("reddit_replies", lasttime)
+    print(str(len(comments)) + ' new comments retrieved since ' + str(lasttime) + ' -- ' + str(timesort.epoch_to_utc(lasttime)))
+    commentobjectarray = [RedditComment(*x) for x in comments]
+    print("NLP might take a while. Number of comments processing: " + str(len(commentobjectarray)))
+    xcount = 0
+    oldcountp = 0
+    for x in commentobjectarray:
+        commenttokeniser(x, coinnames)
+        freqcalc(x)
+        sentcalc(x)
+        existingarray.append(x)
+        xcount += 1
+        newcountp = (xcount/len(commentobjectarray))*100
+        if newcountp - oldcountp >= 1:
+            oldcountp = newcountp
+            print(str(round(newcountp))+"% completed.")
+    writepickle(existingarray)
+    print('pickle updated')
 
 
 def fetch_analyse_write():
@@ -112,17 +140,17 @@ def fetch_analyse_write():
     comments = redditdb.returnwholetable("reddit_replies")
     commentobjectarray = [RedditComment(*x) for x in comments]
     print("NLP might take a while. Number of comments processing: " + str(len(commentobjectarray)))
-    a = len(commentobjectarray)/100
-    b = 0
-    c = 0
+    xcount = 0
+    oldcountp = 0
     for x in commentobjectarray:
         commenttokeniser(x, coinnames)
         freqcalc(x)
         sentcalc(x)
-        b += 1
-        if b % a == 0:
-            c += 1
-            print(str(c)+"% completed.")
+        xcount += 1
+        newcountp = (xcount/len(commentobjectarray))*100
+        if newcountp - oldcountp >= 1:
+            oldcountp = newcountp
+            print(str(round(newcountp))+"% completed.")
     writepickle(commentobjectarray)
 
 
@@ -139,18 +167,18 @@ def coinsovertime(commentobjectarray, timee):
                     coindict[coin[0]].append(x.createdutc)
 
     # Creates new dictionary of coins with timeblocks and count in each timeblock {'stellar':{123:1,456,2}}
+    # counts for the PAST interval of timeblock (eg. 5-6pm will be 6pm)
     newcoindict = {}
     for x in coindict:
-        lasttimez = time.time()
         newcoindict[x] = {}
-        for timez in timee:
+        for timez in range(len(timee)-1):
+            prevtimez = timee[timez + 1]
             for y in coindict[x]:
-                if lasttimez > y > timez:
-                    if timez not in newcoindict[x]:
-                        newcoindict[x][timez] = 0
-                    if timez in newcoindict[x]:
-                        newcoindict[x][timez] += 1
-            lasttimez = timez
+                if timee[timez] > y > prevtimez:
+                    if timee[timez] not in newcoindict[x]:
+                        newcoindict[x][timee[timez]] = 0
+                    if timee[timez] in newcoindict[x]:
+                        newcoindict[x][timee[timez]] += 1
 
     # Counts how many times each coin is mentioned
     coinscount = []
@@ -191,33 +219,36 @@ def coinmentionsprinter(coinscount):
     print('\n')
 
 
-def grapher(coinswithtime, cointosearch):
+def grapher(coinswithtime, cointosearch, cointosearchccname):
     cointime = []
     coincount = []
     for x in coinswithtime[cointosearch]:
         cointime.append(matplotlib.dates.epoch2num(x))
         coincount.append(coinswithtime[cointosearch][x])
 
-    response = requests.get("https://min-api.cryptocompare.com/data/histohour?fsym=LTC&tsym=USD&aggregate=1&limit=159")
+    response = requests.get("https://min-api.cryptocompare.com/data/histohour?fsym="+cointosearchccname+"&tsym=BTC&aggregate=1&limit=500")
     data = response.json()
+    print('Cryptocompare fetch data')
     print(data['Data'])
     coinprice = []
     for x in cointime:
         for y in data['Data']:
             if x == matplotlib.dates.epoch2num(y['time']):
                 coinprice.append(y['open'])
-
-    print('coinprice')
+    print('\ncoin count')
+    print(coincount)
+    print('\ncoinprice before')
     print(coinprice)
-
     coinprice = [((x-min(coinprice))/(max(coinprice)-min(coinprice))) for x in coinprice]
     coincount = [(x-min(coincount))/(max(coincount)-min(coincount)) for x in coincount]
-    print(coincount)
+    print('\ncoinpriceafter')
     print(coinprice)
+
+
 
     fig, ax = plt.subplots()
     # Plot the date using plot_date rather than plot
-    ax.plot_date(cointime, coincount, '--', label='coincount')
+    ax.plot_date(cointime, coincount, '*-', label='coincount')
     ax.plot_date(cointime, coinprice, '--', label='coinprice')
     # Choose your xtick format string
     date_fmt = '%d-%m %H:%M'
@@ -235,14 +266,20 @@ def grapher(coinswithtime, cointosearch):
 def main():
     print('Start time: ' + str(timesort.epoch_to_utc(time.time())) + '\n')
 
-    # fetch_analyse_write()
+    fetch_analyse_update()
+
     coinarray = readpickle()
-    timearray = timesort.timearray_pastxintervals(3600,160)  # create time array for coinsovertime (interval, length)
+
+    timearray = timesort.timearray_pastxintervals(3600, 100)  # create time array for coinsovertime (interval, length)
     coinswithtime, coinscount = coinsovertime(coinarray, timearray)
-    #coinmentionsprinter(coinscount)
-    coinovertimeprinter(coinswithtime, 'ltc')
-    #printcomments('poly', coinarray)
-    grapher(coinswithtime, 'ltc')
+    coinmentionsprinter(coinscount)
+
+    cointosearch = 'ADA'.lower()
+    cointosearchccname = 'ADA'
+    #coinovertimeprinter(coinswithtime, cointosearch)
+    #printcomments(cointosearch, coinarray)
+    grapher(coinswithtime, cointosearch, cointosearchccname)
+
     print('\nEnd time: ' + str(timesort.epoch_to_utc(time.time())))
 
 
