@@ -9,7 +9,7 @@ import asyncio
 import aiohttp
 
 # locations of existing list of coins
-coinlist_location_online = "https://raw.githubusercontent.com/vincnt/Lambo/master/coinlist.json"
+coinlist_location_online = "https://raw.githubusercontent.com/vincnt/Lambo/master/utils/coinlist.json"
 coinlist_location_local = "/home/vincent/Projects/Crypto/Lambo/utils/coinlist.json"
 
 # credentials to connect to Google auth - for local runs.

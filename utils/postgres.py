@@ -1,6 +1,7 @@
 import psycopg2
 from utils import postgres_config as config
 from utils import timetools
+import pprint
 
 
 def connectdb():
@@ -51,7 +52,9 @@ def tailtable(table):
     cursor.execute("SELECT * FROM " + table + " ORDER BY createdutc DESC LIMIT 10")
     records=cursor.fetchall()
     for x in records:
-        print(timetools.epoch_to_utc(int(x[7])))
+        pprint.pprint(x)
+    for x in records:
+        print(timetools.epoch_to_utc(int(x[6])))
     return records
 
 
@@ -71,7 +74,18 @@ def totalrowcount(table):
     return records
 
 
+def upvotecheck(table):
+    conn = connectdb()
+    cursor = conn.cursor()
+    cursor.execute("SELECT ups FROM " + table + " ORDER BY createdutc")
+    records = cursor.fetchall()
+    upvotes = []
+    for x in records:
+        upvotes.append(x[0])
+    return upvotes
+
+
 # put in a return table from specified date function
 if __name__ == "__main__":
-    test = returnwholetable('reddit_replies')
-    print(test)
+    print(listcolumns('reddit_replies'))
+    tailtable('reddit_replies')

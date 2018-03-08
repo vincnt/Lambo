@@ -4,19 +4,19 @@ import pprint
 import urllib.request
 
 # location of existing list of coins
-coinlist_location_local = "coinlist.json"
-coinlist_location_github = "https://raw.githubusercontent.com/vincnt/Lambo/master/coinlist.json"
+coinlist_location_local = '/home/vincent/Projects/Crypto/Lambo/utils/coinlist.json'
+coinlist_location_github = "https://raw.githubusercontent.com/vincnt/Lambo/master/utils/coinlist.json"
 
 
 # read coin file
-def read_local():
+def read_local_coinlist():
     with open(coinlist_location_local) as currentlist:
         data = json.load(currentlist)
         return data
 
 
 # read coin file from online location (github)
-def read_github():
+def read_github_coinlist():
     with urllib.request.urlopen(coinlist_location_github) as url:
         data = json.loads(url.read().decode())
         return data
@@ -26,6 +26,61 @@ def read_github():
 def write_new(newdata):
     with open(coinlist_location_local, 'w') as writer:
         json.dump(newdata, writer)
+
+
+def namescompiler(data):
+    currentcoindict = data
+    for x in currentcoindict:
+        temparray = []
+        temparray.append(x.lower())
+        temparray.append(currentcoindict[x]['CMC_ID'].lower())
+        temparray.append(currentcoindict[x]['Name'].lower())
+        if 'CC_ID' in currentcoindict[x]:
+            temparray.append(currentcoindict[x]['CC_key'].lower())
+        currentcoindict[x]['Names']=temparray
+    return currentcoindict
+
+
+def coinlist_filterrank(rankthreshold, localorgit):
+    newdict = {}
+    if localorgit == 1:
+        data = read_github_coinlist()
+    else:
+        data = read_local_coinlist()
+    for x in data:
+        if int(data[x]['CMC_rank']) < rankthreshold:
+            newdict[x] = {}
+            newdict[x]['CMC_rank'] = data[x]['CMC_rank']
+            newdict[x]['Name'] = data[x]['Name']
+            newdict[x]['CMC_lastupdated'] = data[x]['CMC_lastupdated']
+            newdict[x]['CMC_ID'] = data[x]['CMC_ID']
+            if 'Protocol' in data[x]:
+                newdict[x]['Protocol'] = data[x]['Protocol']
+            if 'CC_ID' in data[x]:
+                newdict[x]['CC_symbol'] = data[x]['CC_symbol']
+                newdict[x]['CC_rank'] = data[x]['CC_rank']
+                newdict[x]['CC_markets'] = data[x]['CC_markets']
+                newdict[x]['CC_key'] = data[x]['CC_key']
+                newdict[x]['CC_algo'] = data[x]['CC_algo']
+                newdict[x]['CC_ID'] = data[x]['CC_ID']
+                newdict[x]['Names'] = data[x]['Names']
+
+    return newdict
+
+
+def coinlist_filter_rank(rankthreshold, localorgit):
+    newdict = {}
+    if localorgit == 1:
+        data = read_github_coinlist()
+    else:
+        data = read_local_coinlist()
+    for x in data:
+        if int(data[x]['CMC_rank']) < rankthreshold:
+            newdict[x] = {}
+            for y in data[x]:
+                newdict[x][y] = data[x][y]
+
+    return newdict
 
 
 # Retrieve coin data from CoinMarketCap and compiles new coins that are not in existing list
@@ -99,22 +154,25 @@ def cc_markets_adder(coin, cc_symbol):
 
 # used for debugging - cleans the coinlist file
 def clean_slate():
-    with open("coinlist.json", 'w') as writer:
+    with open(coinlist_location_local, 'w') as writer:
         json.dump({}, writer)
 
 
 # main_aws function
 def general_update():
-    clean_slate()
-    currentdata = read_local()  # Read coin list
+    #clean_slate()
+    currentdata = read_local_coinlist()  # Read coin list
     newdata = cmc_coin_fetch(currentdata)  # Fetch from Coinmarketcap
     print("Markets will take a while to load...")
     newdata = cc_coin_fetch(newdata)  # Update from CryptoCompare
+    newdata = namescompiler(newdata)
     combineddata = {**currentdata, **newdata}  # Add new data to existing data
     write_new(combineddata)  # Write combined new data
     print(str(len(newdata)) + " New coins added: ")
     pprint.pprint(newdata)
     print("Done!")
+    return combineddata
 
 
-general_update()
+if __name__ == "__main__":
+    print(len(read_local_coinlist()))
