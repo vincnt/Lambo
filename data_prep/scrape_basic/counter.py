@@ -35,12 +35,11 @@ class RedditPost:
 
 
 class RedditComment:
-    def __init__(self, id, author, h, text, downs, ups, subreddit, createdutc, parent_id):
+    def __init__(self, id, author, h, text, ups, subreddit, createdutc, parent_id):
         self.id = id
         self.author = author
         self.hash = None
         self.text = text
-        self.downs = downs
         self.ups = ups
         self.subreddit = subreddit
         self.createdutc = createdutc
@@ -135,6 +134,34 @@ def fetch_analyse_update():
     print('pickle updated')
 
 
+def fetch_analyse_updatepastday():
+    coinnames = getcoinnames()
+    temparray = readpickle()
+    existingarray = []
+    lasttime = timesort.currenttime() - (60*60*24)
+    for x in temparray:
+        if x.createdutc < lasttime:
+            existingarray.append(x)
+    comments = redditdb.returnwholetablefromtime("reddit_replies", lasttime)
+    print(str(len(comments)) + ' new comments retrieved since ' + str(lasttime) + ' -- ' + str(timesort.epoch_to_utc(lasttime)))
+    commentobjectarray = [RedditComment(*x) for x in comments]
+    print("NLP might take a while. Number of comments processing: " + str(len(commentobjectarray)))
+    xcount = 0
+    oldcountp = 0
+    for x in commentobjectarray:
+        commenttokeniser(x, coinnames)
+        freqcalc(x)
+        sentcalc(x)
+        existingarray.append(x)
+        xcount += 1
+        newcountp = (xcount/len(commentobjectarray))*100
+        if newcountp - oldcountp >= 1:
+            oldcountp = newcountp
+            print(str(round(newcountp))+"% completed.")
+    writepickle(existingarray)
+    print('pickle updated')
+
+
 def fetch_analyse_write():
     coinnames = getcoinnames()
     comments = redditdb.returnwholetable("reddit_replies")
@@ -162,31 +189,68 @@ def coinsovertime(commentobjectarray, timee):
             mostcommon = x.freqdist.most_common(10)
             for coin in mostcommon:
                 if coin[0] not in coindict and coin[0] not in other_stop_words:
-                    coindict[coin[0]] = [x.createdutc]
+                    coindict[coin[0]] = {}
+                    coindict[coin[0]][x.createdutc] = x.ups
                 elif coin[0] not in other_stop_words:
-                    coindict[coin[0]].append(x.createdutc)
+                    coindict[coin[0]][x.createdutc] = x.ups
 
+    # sentiment
+    coindictpre_sent = {}
+    # generate dictionary of coins and their epoch time blocks {'stellar':[123,456],'eth':[123,345]}
+    for x in commentobjectarray:
+        if x.freqdist.most_common(10):
+            mostcommon = x.freqdist.most_common(10)
+            for coin in mostcommon:
+                if coin[0] not in coindictpre_sent and coin[0] not in other_stop_words:
+                    coindictpre_sent[coin[0]] = {}
+                    coindictpre_sent[coin[0]][x.createdutc] = x.sent
+                elif coin[0] not in other_stop_words:
+                    coindictpre_sent[coin[0]][x.createdutc] = x.sent
+
+    # without ups
     # Creates new dictionary of coins with timeblocks and count in each timeblock {'stellar':{123:1,456,2}}
     # counts for the PAST interval of timeblock (eg. 5-6pm will be 6pm)
-    newcoindict = {}
+    coindictplain = {}
+    coindictups = {}
+    coindictsent = {}
+    coindictupssent = {}
     for x in coindict:
-        newcoindict[x] = {}
-        for timez in range(len(timee)-1):
+        coindictplain[x] = {}
+        coindictups[x] = {}
+        coindictsent[x] = {}
+        coindictupssent[x] = {}
+        for timez in range(len(timee) - 1):
             prevtimez = timee[timez + 1]
             for y in coindict[x]:
                 if timee[timez] > y > prevtimez:
-                    if timee[timez] not in newcoindict[x]:
-                        newcoindict[x][timee[timez]] = 0
-                    if timee[timez] in newcoindict[x]:
-                        newcoindict[x][timee[timez]] += 1
+                    if timee[timez] not in coindictplain[x]:
+                        coindictplain[x][timee[timez]] = 0
+                    if timee[timez] in coindictplain[x]:
+                        coindictplain[x][timee[timez]] += 1
+                    if timee[timez] not in coindictups[x]:
+                        coindictups[x][timee[timez]] = 0
+                    if timee[timez] in coindictups[x]:
+                        coindictups[x][timee[timez]] += coindict[x][y]
+                    if timee[timez] not in coindictsent[x]:
+                        coindictsent[x][timee[timez]] = 0
+                    if timee[timez] in coindictsent[x]:
+                        coindictsent[x][timee[timez]] += coindictpre_sent[x][y]
+                    if timee[timez] not in coindictupssent[x]:
+                        coindictupssent[x][timee[timez]] = 0
+                    if timee[timez] in coindictupssent[x]:
+                        coindictupssent[x][timee[timez]] += (coindictpre_sent[x][y] + coindict[x][y])
 
     # Counts how many times each coin is mentioned
     coinscount = []
-    for x in coindict:
-        coinscount.append(tuple([x, len(coindict[x])]))
-    coinscount.sort(key=lambda y: y[1], reverse=True)
+    for x in coindictplain:
+        tempcount = 0
+        for y in coindictplain[x]:
+            tempcount += coindictplain[x][y]
+        temptuple = tuple([x, tempcount])
+        coinscount.append(temptuple)
+        coinscount.sort(key=lambda y: y[1], reverse=True)
 
-    return newcoindict, coinscount
+    return coindictups, coindictplain, coindictsent, coindictupssent, coinscount
 
 
 def printcomments(coin, commentobjectarray):
@@ -199,7 +263,6 @@ def printcomments(coin, commentobjectarray):
                 print(commentobjectarray[x].freqdist.most_common(10))
                 print(commentobjectarray[x].text)
                 print('ups: ' + str(commentobjectarray[x].ups))
-                print('downs: ' + str(commentobjectarray[x].downs))
                 print('sent: ' + str(commentobjectarray[x].sent))
                 print('subreddit: ' + str(commentobjectarray[x].subreddit))
                 print('createdepoch: ' + str(commentobjectarray[x].createdutc))
@@ -266,16 +329,16 @@ def grapher(coinswithtime, cointosearch, cointosearchccname):
 def main():
     print('Start time: ' + str(timesort.epoch_to_utc(time.time())) + '\n')
 
-    fetch_analyse_update()
+    fetch_analyse_write()
 
     coinarray = readpickle()
 
-    timearray = timesort.timearray_pastxintervals(3600, 100)  # create time array for coinsovertime (interval, length)
-    coinswithtime, coinscount = coinsovertime(coinarray, timearray)
+    timearray = timesort.timearray_pastxintervals(3600, 70)  # create time array for coinsovertime (interval, length)
+    coinswithtimeups, coinswithtime, coinswithsent, coinswithupsent, coinscount = coinsovertime(coinarray, timearray)
     coinmentionsprinter(coinscount)
-
-    cointosearch = 'ADA'.lower()
-    cointosearchccname = 'ADA'
+    coinswithtime = coinswithupsent
+    cointosearch = 'NEO'.lower()
+    cointosearchccname = 'NEO'
     #coinovertimeprinter(coinswithtime, cointosearch)
     #printcomments(cointosearch, coinarray)
     grapher(coinswithtime, cointosearch, cointosearchccname)
@@ -284,6 +347,7 @@ def main():
 
 
 main()
+
 
 
 '''
