@@ -22,52 +22,6 @@ def read_github_coinlist():
         return data
 
 
-# write final result to coin file
-def write_new(newdata):
-    with open(coinlist_location_local, 'w') as writer:
-        json.dump(newdata, writer)
-
-
-def namescompiler(data):
-    currentcoindict = data
-    for x in currentcoindict:
-        temparray = []
-        temparray.append(x.lower())
-        temparray.append(currentcoindict[x]['CMC_ID'].lower())
-        temparray.append(currentcoindict[x]['Name'].lower())
-        if 'CC_ID' in currentcoindict[x]:
-            temparray.append(currentcoindict[x]['CC_key'].lower())
-        currentcoindict[x]['Names']=temparray
-    return currentcoindict
-
-
-def coinlist_filterrank(rankthreshold, localorgit):
-    newdict = {}
-    if localorgit == 1:
-        data = read_github_coinlist()
-    else:
-        data = read_local_coinlist()
-    for x in data:
-        if int(data[x]['CMC_rank']) < rankthreshold:
-            newdict[x] = {}
-            newdict[x]['CMC_rank'] = data[x]['CMC_rank']
-            newdict[x]['Name'] = data[x]['Name']
-            newdict[x]['CMC_lastupdated'] = data[x]['CMC_lastupdated']
-            newdict[x]['CMC_ID'] = data[x]['CMC_ID']
-            if 'Protocol' in data[x]:
-                newdict[x]['Protocol'] = data[x]['Protocol']
-            if 'CC_ID' in data[x]:
-                newdict[x]['CC_symbol'] = data[x]['CC_symbol']
-                newdict[x]['CC_rank'] = data[x]['CC_rank']
-                newdict[x]['CC_markets'] = data[x]['CC_markets']
-                newdict[x]['CC_key'] = data[x]['CC_key']
-                newdict[x]['CC_algo'] = data[x]['CC_algo']
-                newdict[x]['CC_ID'] = data[x]['CC_ID']
-                newdict[x]['Names'] = data[x]['Names']
-
-    return newdict
-
-
 def coinlist_filter_rank(rankthreshold, localorgit):
     newdict = {}
     if localorgit == 1:
@@ -81,6 +35,26 @@ def coinlist_filter_rank(rankthreshold, localorgit):
                 newdict[x][y] = data[x][y]
 
     return newdict
+
+
+# write final result to coin file
+def write_new(newdata):
+    with open(coinlist_location_local, 'w') as writer:
+        json.dump(newdata, writer)
+
+
+# add array of names for each coin to its dict eg(cardano,ada)
+def namescompiler(data):
+    currentcoindict = data
+    for x in currentcoindict:
+        temparray = []
+        temparray.append(x.lower())
+        temparray.append(currentcoindict[x]['CMC_ID'].lower())
+        temparray.append(currentcoindict[x]['Name'].lower())
+        if 'CC_ID' in currentcoindict[x]:
+            temparray.append(currentcoindict[x]['CC_key'].lower())
+        currentcoindict[x]['Names']=temparray
+    return currentcoindict
 
 
 # Retrieve coin data from CoinMarketCap and compiles new coins that are not in existing list
