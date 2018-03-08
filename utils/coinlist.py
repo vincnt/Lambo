@@ -22,7 +22,7 @@ def read_github_coinlist():
         return data
 
 
-def coinlist_filter_rank(rankthreshold, localorgit):
+def fetch_coinlist_rankfilter(rankthreshold, localorgit):
     newdict = {}
     if localorgit == 1:
         data = read_github_coinlist()
@@ -35,6 +35,15 @@ def coinlist_filter_rank(rankthreshold, localorgit):
                 newdict[x][y] = data[x][y]
 
     return newdict
+
+
+def fetch_coinnameslist_rankfilter(rankthreshold, localorgit):
+    coinnames = []
+    data = fetch_coinlist_rankfilter(rankthreshold, localorgit)
+    for coin in data:
+        for name in data[coin]['Names']:
+            coinnames.append(name)
+    return set(coinnames)
 
 
 # write final result to coin file

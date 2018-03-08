@@ -4,7 +4,7 @@ import json
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
 from nltk import tokenize
 import pickle
-from utils import timetools as timesort, postgres as redditdb
+from utils import timetools as timesort, postgres as redditdb, coinlist as cointools
 import matplotlib.dates
 import matplotlib.pyplot as plt
 import time
@@ -14,6 +14,9 @@ import requests
 
 stop_words = set(nltk.corpus.stopwords.words('english'))
 other_stop_words = ['doge', 'part', 'rise', 'key', 'pay', 'etc', 'bot', 'moon', 'link', 'game', 'trust', 'data', 'fun', 'block', 'key', 'karma', 'via', 'decent', 'sub', 'get', 'time', 'change', 'life', 'ok']
+
+coinlistrankfilter = 500
+coinlistsource = 0 #0 for local, 1 for github
 
 
 class RedditPost:
@@ -57,7 +60,7 @@ def posttokeniser(testobject):
     testobject.titletoken = [word for word in testobject.titletoken if len(word) > 1]
     testobject.titletoken = [word for word in testobject.titletoken if word not in stop_words]
 
-
+'''
 def commenttokeniser(testobject, coinnames):
     testobject.texttoken = nltk.word_tokenize(testobject.text.translate(dict.fromkeys(string.punctuation)))
     testobject.texttokencoin = [word.lower() for word in testobject.texttoken if word.lower() in coinnames and word not in stop_words and word not in other_stop_words]
@@ -79,21 +82,7 @@ def sentcalc(x):
     if count != 0:
         sent = float(sent / count)
     x.sent = sent
-
-
-def getcoinnames():
-    coinnames = []
-    with open('/home/vincent/Projects/Crypto/Lambo/utils/coinlist.json') as currentlist:
-        data = json.load(currentlist)
-        for x in data:
-            if int(data[x]['CMC_rank']) < 500:
-                coinnames.append(x.lower())
-                if 'CC_key' in data[x]:
-                    coinnames.append(data[x]['CC_key'].lower())
-                coinnames.append(data[x]['CMC_ID'].lower())
-                coinnames.append(data[x]['Name'].lower())
-    return set(coinnames)
-
+'''
 
 def writepickle(objecttowrite):
     with open("commentarray", "wb") as commentarray:
@@ -106,9 +95,9 @@ def readpickle():
         print('\nlen of pickle comment array that is being read in (number of comments): ' + str(len(commentobjectarraynew)) + '\n')
     return commentobjectarraynew
 
-
+'''
 def fetch_analyse_update():
-    coinnames = getcoinnames()
+    coinnames = cointools.fetch_coinnameslist_rankfilter(coinlistrankfilter, coinlistsource)
     existingarray = readpickle()
     lasttime = 0
     for x in existingarray:
@@ -135,7 +124,7 @@ def fetch_analyse_update():
 
 
 def fetch_analyse_updatepastday():
-    coinnames = getcoinnames()
+    coinnames = cointools.fetch_coinnameslist_rankfilter(coinlistrankfilter, coinlistsource)
     temparray = readpickle()
     existingarray = []
     lasttime = timesort.currenttime() - (60*60*24)
@@ -163,7 +152,7 @@ def fetch_analyse_updatepastday():
 
 
 def fetch_analyse_write():
-    coinnames = getcoinnames()
+    coinnames = cointools.fetch_coinnameslist_rankfilter(coinlistrankfilter, coinlistsource)
     comments = redditdb.returnwholetable("reddit_replies")
     commentobjectarray = [RedditComment(*x) for x in comments]
     print("NLP might take a while. Number of comments processing: " + str(len(commentobjectarray)))
@@ -179,6 +168,7 @@ def fetch_analyse_write():
             oldcountp = newcountp
             print(str(round(newcountp))+"% completed.")
     writepickle(commentobjectarray)
+'''
 
 
 def coinsovertime(commentobjectarray, timee):
@@ -346,9 +336,9 @@ def main():
     print('\nEnd time: ' + str(timesort.epoch_to_utc(time.time())))
 
 
-main()
-
-
+#main()
+print(cointools.fetch_coinnameslist_rankfilter(coinlistrankfilter, coinlistsource))
+print(len(cointools.fetch_coinnameslist_rankfilter(coinlistrankfilter, coinlistsource)))
 
 '''
 records = redditb.get_posts()
