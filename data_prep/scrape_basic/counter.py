@@ -84,6 +84,7 @@ def sentcalc(x):
     x.sent = sent
 '''
 
+
 def writepickle(objecttowrite):
     with open("commentarray", "wb") as commentarray:
         pickle.dump(objecttowrite, commentarray)

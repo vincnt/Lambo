@@ -25,6 +25,18 @@ def fetch_pastday(table, picklefile):
     return result, existingarray
 
 
+def fetch_past3hours(table, picklefile):
+    temparray = readpickle(picklefile)
+    existingarray = []
+    lasttime = timesort.currenttime() - (60*60*3)
+    for x in temparray:
+        if x.createdutc < lasttime:
+            existingarray.append(x)
+    result = redditdb.returnwholetablefromtime(table, lasttime)
+    print(str(len(result)) + ' new results retrieved since ' + str(lasttime) + ' -- ' + str(timesort.epoch_to_utc(lasttime)))
+    return result, existingarray
+
+
 def fetch_newentries(table, picklefile):
     existingarray = readpickle(picklefile)
     lasttime = 0
@@ -43,4 +55,4 @@ def fetch_all(table):
 
 
 if __name__ == "__main__":
-    print(fetch_pastday('reddit_replies','commentarray'))
+    print('main')
