@@ -1,3 +1,5 @@
+# Generic postgres functions
+
 import psycopg2
 from utils import postgres_config as config
 from utils import timetools

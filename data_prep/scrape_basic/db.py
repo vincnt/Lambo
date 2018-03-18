@@ -1,3 +1,5 @@
+# Postgres db utilities for scraping
+
 from utils import timetools as timesort, postgres as redditdb, coinlist as cointools
 import pickle
 from data_prep.scrape_basic.redditcomment import RedditComment

@@ -1,3 +1,5 @@
+# functions for a reddit comment
+
 from utils import timetools as timesort, postgres as redditdb, coinlist as cointools
 import nltk
 import string
@@ -44,6 +46,16 @@ class RedditComment:
     def main(self):
         self.tokenisetext()
         self.calculatesent()
+
+    def printer(self):
+        print(self.coinsmentioned)
+        print(self.text)
+        print('ups: ' + str(self.ups))
+        print('sent: ' + str(self.sentiment))
+        print('subreddit: ' + str(self.subreddit))
+        print('createdepoch: ' + str(self.createdutc))
+        print('createdutc: ' + str(timesort.epoch_to_utc(self.createdutc)))
+        print('\n')
 
 
 if __name__ == "__main__":

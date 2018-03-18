@@ -1,3 +1,5 @@
+# main function that intiates the process to fetch items from PostGres, apply calculations and save to pickle
+
 from data_prep.scrape_basic import db as scrape_db
 from data_prep.scrape_basic.redditcomment import RedditComment
 import pickle
@@ -22,10 +24,24 @@ def apply_nlp(objectarray):
     return objectarray
 
 
-newarray, existingarray = scrape_db.fetch_past3hours('reddit_replies', 'commentarray')
-#finalarray = existingarray + apply_nlp([RedditComment(*x) for x in newarray])
-finalarray = apply_nlp([RedditComment(*x) for x in newarray])
-writepickle(finalarray)
+# gotta make the pickle file name, which is currently 'comment array' also OOP
+def main(timevar, table):
+    if timevar == '3 hours' and table == 'reddit_replies':
+        newarray, existingarray = scrape_db.fetch_past3hours('reddit_replies', 'commentarray')
+        finalarray = existingarray + apply_nlp([RedditComment(*x) for x in newarray])
+        writepickle(finalarray)
+    if timevar == '1 day' and table == 'reddit_replies':
+        newarray, existingarray = scrape_db.fetch_pastday('reddit_replies', 'commentarray')
+        finalarray = existingarray + apply_nlp([RedditComment(*x) for x in newarray])
+        writepickle(finalarray)
+    if timevar == 'new entries' and table == 'reddit_replies':
+        newarray, existingarray = scrape_db.fetch_newentries('reddit_replies', 'commentarray')
+        finalarray = existingarray + apply_nlp([RedditComment(*x) for x in newarray])
+        writepickle(finalarray)
+    if timevar == 'all time' and table == 'reddit_replies':
+        newarray, existingarray = scrape_db.fetch_all('reddit_replies')
+        finalarray = existingarray + apply_nlp([RedditComment(*x) for x in newarray])
+        writepickle(finalarray)
 
 
 
