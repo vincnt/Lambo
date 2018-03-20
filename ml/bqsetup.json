@@ -1,0 +1,50 @@
+{
+ "cells": [
+  {
+   "cell_type": "code",
+   "execution_count": 33,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import os \n",
+    "import pandas as pd\n",
+    "\n",
+    "os.environ[\"GOOGLE_APPLICATION_CREDENTIALS\"] = '/Users/cerber/Projects/Lambo/ml/bq_creds.json'\n",
+    "from google.cloud import bigquery\n",
+    "client = bigquery.Client()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 34,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "DatasetReference('lambo-192519', 'Market_Fetch')"
+      ]
+     },
+     "execution_count": 34,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "# BigQuery Setup\n",
+    "bq_dataset = \"Market_Fetch\"\n",
+    "bq_table = \"raw_prices\"\n",
+    "client.dataset(bq_dataset)\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 43,
+   "metadata": {
+    "scrolled": true
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
