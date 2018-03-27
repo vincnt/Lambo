@@ -11,7 +11,7 @@ def grapher(coinswithtime, cointosearch, cointosearchccname):
         cointime.append(matplotlib.dates.epoch2num(x))
         coincount.append(coinswithtime[cointosearch][x])
 
-    response = requests.get("https://min-api.cryptocompare.com/data/histohour?fsym="+cointosearchccname+"&tsym=BTC&aggregate=1&limit=500")
+    response = requests.get("https://min-api.cryptocompare.com/data/histohour?fsym="+cointosearchccname+"&tsym=BTC&aggregate=1&limit=1200")
     data = response.json()
     print('Cryptocompare fetch data')
     print(data['Data'])

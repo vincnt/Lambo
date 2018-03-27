@@ -18,7 +18,7 @@ def readpickle(picklefile):
 def rawcoinscount(commentobjectarray):
     rawcoindictups = {}
     rawcoindictsent = {}
-    # generate dictionary of coins and their epoch time blocks {'ven': {1520534400: 2, 1520534225: 1}, 'eth':...}}
+    # generate dictionary of coins and their epoch time blocks {'ven': {1520534400: 1, 1520534225: 1}, 'eth':...}}
     for x in commentobjectarray:
         if x.coinsmentioned:
             for coin in x.coinsmentioned:
@@ -82,7 +82,7 @@ def totalcountpercoin(coindictplain):
 def returntotalcountpercoin():
     coinarray = readpickle('commentarray')
     coincountups, coincountsent = rawcoinscount(coinarray)
-    timearray = timesort.timearray_pastxintervals(3600,100)  # time array for coinsovertime (interval in seconds, length)
+    timearray = timesort.timearray_pastxintervals(3600,400)  # time array for coinsovertime (interval in seconds, length)
     cd_plain, cd_ups, cd_sent, cd_upsplussent, cd_upstimessent = coinsovertime(coincountups, coincountsent, timearray)
     totalcountarray = totalcountpercoin(cd_plain)
     return totalcountarray
@@ -91,7 +91,7 @@ def returntotalcountpercoin():
 def return_coindicts():
     coinarray = readpickle('commentarray')
     coincountups, coincountsent = rawcoinscount(coinarray)
-    timearray = timesort.timearray_pastxintervals(3600, 100)  # time array for coinsovertime (interval in seconds, length)
+    timearray = timesort.timearray_pastxintervals(3600, 1350)  # time array for coinsovertime (interval in seconds, length)
     cd_plain, cd_ups, cd_sent, cd_upsplussent, cd_upstimessent = coinsovertime(coincountups, coincountsent, timearray)
     return cd_plain, cd_ups, cd_sent, cd_upsplussent, cd_upstimessent
 
