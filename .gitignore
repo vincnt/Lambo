@@ -1,2 +1,8 @@
-.ipynb_checkpoints
+:.ipynb_checkpoints
 *.pickle
+ml/data
+*plot_dir
+.idea
+.DS_Store
+*__pycache__
+*.ipynb_checkpoints
