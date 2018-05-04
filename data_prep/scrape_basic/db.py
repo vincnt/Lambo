@@ -51,7 +51,7 @@ def fetch_newentries(table, picklefile):
 
 
 def fetch_all(table):
-    results = redditdb.returnwholetable("table")
+    results = redditdb.returnwholetable(table)
     existingarray = []
     return results, existingarray
 

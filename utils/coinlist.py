@@ -46,6 +46,8 @@ def fetch_coinnameslist_rankfilter(rankthreshold, localorgit):
     return set(coinnames)
 
 
+###### PRIVATE FUNCTIONS #########
+
 # write final result to coin file
 def write_new(newdata):
     with open(coinlist_location_local, 'w') as writer:
@@ -62,7 +64,7 @@ def namescompiler(data):
         temparray.append(currentcoindict[x]['Name'].lower())
         if 'CC_ID' in currentcoindict[x]:
             temparray.append(currentcoindict[x]['CC_key'].lower())
-        currentcoindict[x]['Names']=temparray
+        currentcoindict[x]['Names'] = list(set(temparray))
     return currentcoindict
 
 
@@ -143,7 +145,7 @@ def clean_slate():
 
 # main_aws function
 def general_update():
-    #clean_slate()
+    clean_slate()
     currentdata = read_local_coinlist()  # Read coin list
     newdata = cmc_coin_fetch(currentdata)  # Fetch from Coinmarketcap
     print("Markets will take a while to load...")
@@ -159,3 +161,4 @@ def general_update():
 
 if __name__ == "__main__":
     print(len(read_local_coinlist()))
+    general_update()
