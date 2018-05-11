@@ -1,81 +1,42 @@
 import pandas as pd
 import numpy as np
-from typing import List
+from MLDataTools.MLDataSeries import MLDataSeries
 
 
 class MLDataSet:
-    # so one x sample is equal to the num steps in an rnn; makes sense
-
-    def __init__(self, dataframe: pd.DataFrame, features: List[str] = None, targets: List[str] = None):
+    def __init__(self, dictionary={}):
         """
-        MLDataSet uses pandas DataFrame wrapped in common ml methods to make ml more convenient
-        :param dataframe: pandas DataFrame containing the dataset
-        :param features: features in the dataset used for training; column(s) in the DataFrame
-        :param targets: targets to be predicted; column(s) in the DataFrame
-        """
-        self.df = dataframe
-        self.shape = self.df.shape
-
-        if features is None:  # assume all columns are features
-            self.features = list(self.df)
-        else:
-            self.features = features
-
-        if targets is None:  # assume all columns are targets
-            self.targets = list(self.df)
-        else:
-            self.targets = targets
-
-    def separate(self, ratio: float):
+        MLDataSet is essentially a wrapper for a python dictionary in the format {label_of_series: MLDataSeries}
+        labels will be integers
+        :param dictionary: the python dictionary
         """
 
-        :param ratio: size ratio of train/test
-        :return: MLDataSet objects train_set and test_set
-        """
-        end_row = int(self.shape[0] * ratio)
+        self._d = dictionary
+        self.label_map = {}
 
-        train_set = MLDataSet(self.df[0:end_row], features=self.features,
-                              targets=self.targets)
-        test_set = MLDataSet(self.df[end_row:], features=self.features,
-                             targets=self.targets)
+    def __getitem__(self, item):
+        return self._d[item]
 
-        return train_set, test_set,
+    def add(self, dseries: MLDataSeries):
+        index_of_next_item = len(self._d)
+        true_value = dseries.df[dseries.symbol_column].unique()[0]
+        self.label_map[index_of_next_item] = true_value
+        dseries.df[dseries.symbol_column] = [index_of_next_item] * dseries.shape[0]
+        self._d[index_of_next_item] = dseries
 
-    def split(self):
-        """
-        split data set into targets and features
-        :param sep_label:
-        :return: x, y np matrices of floats
-        """
-        y = self.df[self.targets].values
-        x = self.df.drop(self.targets, axis=1).values
-        return x, y
+    def generate_epoch(self):
+        indicies = list(range(len(self._d)))
+        np.random.shuffle(indicies)
+        for index in indicies:
+            yield self._d[index]
 
-    def generate_epoch(self, batch_size: int, gap: int):
-        """
-        Used when to iteratively generate batches for one epoch
-        :param gap: time series gap
-        :param batch_size: size of the batch
-        :return: x, y np matrices of floats
-        """
-        batch_indicies = list(range(self.shape[0] // batch_size))
-        np.random.shuffle(batch_indicies)
+    def separate(self, split_ratio=0.9):
+        indicies = list(range(len(self._d)))
+        test_set_index = np.random.choice(indicies)
+        train, test = self._d[test_set_index].separate(ratio=split_ratio)
+        self._d[test_set_index] = train
+        test_true_label = self.label_map[test.df[test.symbol_column].unique()[0]]
+        return test, test_true_label
 
-        for i in batch_indicies:
-            batch = MLDataSet(self.df[i * batch_size: (i + 1) * batch_size], features=self.features,
-                              targets=self.targets)
-            yield batch.time_series_split(gap)
-
-    def time_series_split(self, gap: int):
-        """
-        take a time gap and produce inputs and targets based on gap
-        :return: x, y np matrices of floats
-        """
-        # select the right columns
-        inputs = self.df[self.features]
-        targets = self.df[self.targets]
-
-        x = np.array([inputs[i:i + gap].values for i in range(inputs.shape[0] - gap)])
-        y = np.array([targets.iloc[gap + i] for i in range(targets.shape[0] - gap)])  # works when 1d
-
-        return x, y
+    def __len__(self):
+        return len(self._d)

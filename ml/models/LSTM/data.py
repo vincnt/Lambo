@@ -4,7 +4,7 @@ import os
 projectid = "lambo-192519"
 
 QUERY = (
-    "SELECT CMC_ID, CC_USD_PRICE, Timestamp FROM `Market_Fetch.raw_prices`"
+    "SELECT CMC_ID, CC_USD_PRICE, CC_ETH_PRICE, CC_BTC_PRICE, Timestamp FROM `Market_Fetch.raw_prices`"
     "WHERE (CMC_ID IS NOT NULL AND CC_USD_PRICE IS NOT NULL AND Timestamp IS NOT NULL )"
 )
 pickle_file = '../../data/raw_prices.pickle'

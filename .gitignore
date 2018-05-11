@@ -1,6 +1,7 @@
 :.ipynb_checkpoints
 *.pickle
 ml/data
+ml/tsboard
 *plot_dir
 .idea
 .DS_Store
