@@ -10,7 +10,6 @@ from MLDataTools import MLDataSet
 
 class LSTM:
     def __init__(self, sess, num_layers, lstm_size, feature_len: int, targets_shape: int, num_steps: int,
-                 plot_dir: str,
                  embed_size: List[int]):
         """
         :param embed_size:[  num stocks:int, num features in embed matrix: int]
@@ -20,7 +19,6 @@ class LSTM:
         :param feature_len: a vector representing dimensions of the input matrix
         :param num_steps: how far back the RNN is unrolled (for back-in-time-propagation)
         """
-        self.plot_dir = plot_dir
         self.sess = sess
         self.num_layers = num_layers
         self.lstm_size = lstm_size
@@ -28,18 +26,15 @@ class LSTM:
         self.num_steps = num_steps
         self.targets_shape = targets_shape
         self.embed_size = embed_size
+
         with open('./models/celebs') as file:
             celebs = file.read()[1:-1].split('\\n')
             self.name = np.random.choice(celebs)
             print("LSTM name: ", self.name)
             file.close()
+        # Tag for directory creation
         date = datetime.now().strftime("%Y-%m-%d.%H-%M-%S")
         self.tag = f"{self.name};{date};neurons={self.lstm_size};num_steps={self.num_steps}"
-        self.base_dir = './tsboard/LSTM/'
-        self.tsdir = self.base_dir + self.tag
-        self.predictionsdir = self.base_dir + self.tag + '/predictions'
-        os.makedirs(self.tsdir)
-        os.makedirs(self.predictionsdir)
 
     def build_graph(self):
         """
@@ -63,7 +58,8 @@ class LSTM:
                     name="embedding_matrix"
                 )
                 # tile stacks the vector into each other num_step times
-                stacked_target_labels = tf.tile(self.symbols, multiples=[1, self.num_steps], name='stacked_stock_labels')
+                stacked_target_labels = tf.tile(self.symbols, multiples=[1, self.num_steps],
+                                                name='stacked_stock_labels')
                 target_label_embeds = tf.nn.embedding_lookup(embedding_matrix, stacked_target_labels)
                 self.inputs_with_embed = tf.concat([self.inputs, target_label_embeds], axis=2, name="inputs_with_embed")
         else:
@@ -132,6 +128,8 @@ class LSTM:
 
         :return: void
         """
+        self.create_dirs()
+
         self.merged_sum = tf.summary.merge_all()
 
         train_writer = tf.summary.FileWriter(self.tsdir + '/train',
@@ -198,3 +196,11 @@ class LSTM:
 
         plt.savefig(figname, format='png', bbox_inches='tight', transparent=False)
         plt.close()
+
+    def create_dirs(self):
+        # creating directories for summary writing (TensorBoard) and predictions
+        self.base_dir = './tsboard/LSTM/'
+        self.tsdir = self.base_dir + self.tag
+        self.predictionsdir = self.base_dir + self.tag + '/predictions'
+        os.makedirs(self.tsdir)
+        os.makedirs(self.predictionsdir)
