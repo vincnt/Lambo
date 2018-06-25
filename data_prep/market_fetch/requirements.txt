@@ -1,0 +1,3 @@
+aiohttp == 2.3.9
+google_api_core == 0.1.4
+requests == 2.18.4
