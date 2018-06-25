@@ -8,6 +8,8 @@ coinlist_location_local = '/home/vincent/Projects/Crypto/Lambo/utils/coinlist.js
 coinlist_location_github = "https://raw.githubusercontent.com/vincnt/Lambo/master/utils/coinlist.json"
 
 
+###### PUBLIC FUNCTIONS #########
+
 # read coin file
 def read_local_coinlist():
     with open(coinlist_location_local) as currentlist:
@@ -22,6 +24,7 @@ def read_github_coinlist():
         return data
 
 
+# returns coinlist filtered by rank threshold
 def fetch_coinlist_rankfilter(rankthreshold, localorgit):
     newdict = {}
     if localorgit == 1:
@@ -37,6 +40,7 @@ def fetch_coinlist_rankfilter(rankthreshold, localorgit):
     return newdict
 
 
+# uses fetch_coinlist_rankfilter then returns the different names for each coin
 def fetch_coinnameslist_rankfilter(rankthreshold, localorgit):
     coinnames = []
     data = fetch_coinlist_rankfilter(rankthreshold, localorgit)
@@ -44,6 +48,42 @@ def fetch_coinnameslist_rankfilter(rankthreshold, localorgit):
         for name in data[coin]['Names']:
             coinnames.append(name)
     return set(coinnames)
+
+
+# generate list of coins that are in a specific exchange(market)
+def market_finder(coinlist, market):
+    marketlist = []
+    for x in coinlist:
+        if 'CC_markets' in coinlist[x]:
+            if coinlist[x]['CC_markets']['BTC']:
+                if market in coinlist[x]['CC_markets']["BTC"]:
+                    marketlist.append(coinlist[x]['CMC_ID'])
+    print(marketlist)
+    print(len(marketlist))
+    return marketlist
+
+
+# get the market caps for coins in $millions
+def cap_finder(coinlist):
+    caplist = {}
+    response = requests.get("https://api.coinmarketcap.com/v1/ticker/?limit=0")
+    data = response.json()
+    for x in coinlist:
+        for y in data:
+            if y['id'] == x:
+                if y['market_cap_usd']:
+                    caplist[x] = float(y['market_cap_usd'])/1000000
+    return caplist
+
+
+'''
+# get market cap of coins for an exchange (a few minutes accuracy)
+marketlist = market_finder(coinlist, "Binance")
+marketlist_d = cap_finder(marketlist)
+sortedmarket = sorted(marketlist_d.items(), key=operator.itemgetter(1))
+for x in sortedmarket:
+    print(x)
+'''
 
 
 ###### PRIVATE FUNCTIONS #########

@@ -7,6 +7,7 @@ import datetime
 import time
 import asyncio
 import aiohttp
+import os
 
 # locations of existing list of coins
 coinlist_location_online = "https://raw.githubusercontent.com/vincnt/Lambo/master/utils/coinlist.json"
@@ -20,8 +21,8 @@ bq_dataset = "Market_Fetch"
 bq_table = "raw_prices"
 
 # Other parameters
-coinlist_rank_filter = 200   # Only return results for those with rank below this (for testing / saving resources)
-fetch_timeout = 30  # timeout for fetching coin price
+coinlist_rank_filter = 500   # Only return results for those with rank below this (for testing / saving resources)
+fetch_timeout = 25  # timeout for fetching coin price
 fetch_price_params = "BTC,USD,ETH"  # prices returned from coin fetch
 fetch_retry_count = 5  # how many times to retry fetching prices in one fetch call
 
@@ -35,37 +36,10 @@ def read_current():
 
 # read coin file from local location
 def read_local():
-    import os
     os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = local_google_credentials
     with open(coinlist_location_local) as currentlist:
         data = json.load(currentlist)
         return data
-
-
-# generate list of coins that are in a specific exchange(market)
-def market_finder(coinlist, market):
-    marketlist = []
-    for x in coinlist:
-        if 'CC_markets' in coinlist[x]:
-            if coinlist[x]['CC_markets']['BTC']:
-                if market in coinlist[x]['CC_markets']["BTC"]:
-                    marketlist.append(coinlist[x]['CMC_ID'])
-    print(marketlist)
-    print(len(marketlist))
-    return marketlist
-
-
-# get the market caps for coins in $millions
-def cap_finder(coinlist):
-    caplist = {}
-    response = requests.get("https://api.coinmarketcap.com/v1/ticker/?limit=0")
-    data = response.json()
-    for x in coinlist:
-        for y in data:
-            if y['id'] == x:
-                if y['market_cap_usd']:
-                    caplist[x] = float(y['market_cap_usd'])/1000000
-    return caplist
 
 
 # load rows into Big Query
@@ -100,10 +74,10 @@ def fetch_runner(coinlist):
         retry_success_list, failed_list = fetch_loop(loop, failed_list)
         for y in retry_success_list:
             success_list.append(y)
-    print(str(len(success_list)) + " successful overall")
-    print(success_list)
-    finalprices = fetch_to_bq_format(success_list,coinlist)
-    bq_loader(finalprices, bq_dataset, bq_table)
+    print(str(len(success_list)) + " successful overall. " + str(len(failed_list)) + " failed.")
+    print("Failed List: ")
+    print(failed_list)
+    return success_list
 
 
 # filter raw conlist into specific parameters eg. only those with CC_symbol, and those with rank <200
@@ -116,19 +90,19 @@ def cc_coinlistfilter(original_list):
     return finallist
 
 
-# one fetch cycle - allows to retry fetches for failed results
+# initiates each fetch cycle
 def fetch_loop(loop, fetch_list):
     with aiohttp.ClientSession(loop=loop) as session:
         fetch_results = loop.run_until_complete(
             fetch_all(session, fetch_list))
-    success_list, failed_list = fetch_success_filter(fetch_results)
+    success_list, failed_list = fetch_success_filter(fetch_results,fetch_list)
     print(str(len(failed_list)) + " failed:")
     print(failed_list)
     print("\n")
     return success_list, failed_list
 
 
-# async function to fetch all coins in the list
+# async function to fetch all coins in the list, called by fetch_loop
 async def fetch_all(session, coins):
     results = await asyncio.gather(
         *[fetch(session, coin) for coin in coins],
@@ -149,18 +123,22 @@ async def fetch(session, coin):
 
 
 # return list of fetches that returned succesfully (no timeout or rate limit exceeded), and return those that failed
-def fetch_success_filter(raw_fetch):
+def fetch_success_filter(raw_fetch, fetch_list):
     success_list = []
+    nameonly_success_list=[]
     failed_list = []
+    print("Total coins searching for: "+str(len(raw_fetch)))
     for x in raw_fetch:
         try:
             if "CC_price" in x:
                 if "BTC" in x["CC_price"]:
                     success_list.append(x)
-                else:
-                    failed_list.append(x["CC_symbol"])
+                    nameonly_success_list.append(x["CC_symbol"])
         except Exception:
             pass
+    for y in fetch_list:
+        if y not in nameonly_success_list:
+            failed_list.append(y)
     print(str(len(success_list))+" returned succesfully:")
     print(success_list)
     return success_list, failed_list
@@ -183,26 +161,19 @@ def fetch_to_bq_format(success_list, coinlist):
                     y['CMC_ID'] = coinlist[z]['CMC_ID']
                     y['CMC_ticker'] = z
         finalprices.append(y)
-    print("final price array")
-    print(finalprices)
     return finalprices
 
 
-def lambda_test(event, context):
+def main():
     coinlist = read_current()
-    fetch_runner(coinlist)
-    return 'yay'  # event['test']
+    fetchresults = fetch_runner(coinlist)
+    bqprices = fetch_to_bq_format(fetchresults, coinlist)
+    print("\nfinal price array")
+    print(bqprices)
+    bq_loader(bqprices, bq_dataset, bq_table)
+    return 'yay'
 
 
-# lambda_test("yay", "woo")
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = local_google_credentials
+main()
 
-
-
-'''
-# get market cap of coins for an exchange (a few minutes accuracy)
-marketlist = market_finder(coinlist, "Binance")
-marketlist_d = cap_finder(marketlist)
-sortedmarket = sorted(marketlist_d.items(), key=operator.itemgetter(1))
-for x in sortedmarket:
-    print(x)
-'''

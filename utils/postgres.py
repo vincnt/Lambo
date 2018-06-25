@@ -48,10 +48,10 @@ def returnwholetablefromtime(table, fromtime):
     return records
 
 
-def tailtable(table):
+def tailtable(table, limit):
     conn = connectdb()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM " + table + " ORDER BY createdutc DESC LIMIT 10")
+    cursor.execute("SELECT * FROM " + table + " ORDER BY createdutc DESC LIMIT "+str(limit))
     records=cursor.fetchall()
     for x in records:
         pprint.pprint(x)
@@ -89,5 +89,5 @@ def upvotecheck(table):
 
 # put in a return table from specified date function
 if __name__ == "__main__":
-    print(listcolumns('reddit_replies'))
-    tailtable('reddit_replies')
+    print(listcolumns('reddit_posts'))
+    tailtable('reddit_posts', 50)

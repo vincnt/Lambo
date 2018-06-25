@@ -1,11 +1,9 @@
 # TO DO
 # put the timesort.timearray_pastxintervals(3600,100) from pickleanalysis into here
-# get bigquery prices
 # multiple input options for analysis and grapher (eg. bitcoin/btc/bittybaby
-# pickle analysis doesnt count things like 'bitcoin cash' because the words are tokenised before it reaches that stage
 # coinlist keys arent lowercased? should they be
 
-from data_prep.scrape_basic import pickleanalysis, picklewriter, db, grapher
+from data_prep.scrape_basic import objectAnalysis, picklewriter, db_pickle_utils, grapher
 from utils import timetools as timesort, postgres as redditdb, coinlist as cointools
 import time
 import pprint
@@ -13,7 +11,7 @@ import pprint
 
 # make this more reusable and also expand to posts
 def printcomments(coin):
-    commentobjectarray = db.readpickle('commentarray')
+    commentobjectarray = db_pickle_utils.readpickle('commentarray')
     for x in range(len(commentobjectarray)):
         templist = []
         for y in commentobjectarray[x].coinsmentioned:
@@ -32,12 +30,12 @@ def specificcoinovertimeprinter(coinswithtime, cointosearch):
 def combiner(cd):
     # get names from coinlist
     # for each name search for all possible names
-    # create new dict and append
+    # create new dict and append, and combine the values of all the different variations of the coin
     coinlist = cointools.read_local_coinlist()
     newdict = {}
     for x in coinlist:
         newdict[x] = {}
-        for name in set(coinlist[x]['Names']): # this doesnt have to be a set once its fixed in coinlist.py
+        for name in set(coinlist[x]['Names']):  # this doesnt have to be a set once its fixed in coinlist.py
             if name in cd:
                 if newdict[x] == {}:
                     newdict[x] = cd[name]
@@ -51,28 +49,29 @@ def combiner(cd):
 
 
 def tests():
-    cd_plain, cd_ups, cd_sent, cd_upsplussent, cd_upstimessent = pickleanalysis.return_coindicts()  # count the stuffs
+    cd_plain, cd_ups, cd_sent, cd_upsplussent, cd_upstimessent = objectAnalysis.return_coindicts()  # count the stuffs
     print(cd_plain)
-    print(pickleanalysis.totalcountpercoin(cd_plain))  # list the total counts for each coin
+    print(objectAnalysis.totalcountpercoin(cd_plain))  # list the total counts for each coin
 
 
 def examplerun():
     # MAIN FUNCTIONS ###############
     print('Start time: ' + str(timesort.epoch_to_utc(time.time())) + '\n')
-
     cointosearch = 'ETH'.lower()  # name in the coin dict array
     cointosearchccname = 'ETH'  # look for the specific CC name for prices
-    # picklewriter.main('3 hours', 'reddit_replies')  # fetch from db and update pickle
-    cd_plain, cd_ups, cd_sent, cd_upsplussent, cd_upstimessent = pickleanalysis.return_coindicts()  # count the stuffs
-    print(pickleanalysis.totalcountpercoin(cd_plain))  # list the total counts for each coin
+    picklewriter.main('all time', 'reddit_replies')  # fetch from db and update pickle
+    cd_plain, cd_ups, cd_sent, cd_upsplussent, cd_upstimessent = objectAnalysis.return_coindicts()  # count the stuffs
+    print(objectAnalysis.totalcountpercoin(cd_plain))  # list the total counts for each coin
     # specificcoinovertimeprinter(cd_plain, cointosearch) # detailed print for a specific coin
     # printcomments(cointosearch)  # print all comments for a specific coin
     grapher.grapher(cd_upsplussent, cointosearch, cointosearchccname)
 
     print('\nEnd time: ' + str(timesort.epoch_to_utc(time.time())))
 
+examplerun()
 
-cd_plain, cd_ups, cd_sent, cd_upsplussent, cd_upstimessent = pickleanalysis.return_coindicts()  # count the stuffs
+'''
+cd_plain, cd_ups, cd_sent, cd_upsplussent, cd_upstimessent = objectAnalysis.return_coindicts()  # count the stuffs
 print(cd_plain)
 print('LENGTH 1')
 print(len(cd_plain['eth']))
@@ -101,6 +100,7 @@ for x in coinlist:
         combinedcombined.append(y)
 
 
+'''
 from google.cloud import bigquery
 import os
 
@@ -118,7 +118,7 @@ def bq_loader(rows, datasetname, tablename):
         print('Errors:')
         pprint.pprint(errors)
 
-
+'''
 local_google_credentials = '/home/vincent/Lambo-89cff3bde0ba.json'
 os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = local_google_credentials
 
@@ -132,7 +132,7 @@ combined3 = combinedcombined[18001:]
 bq_loader(combined1, bq_dataset, bq_table)
 bq_loader(combined2, bq_dataset, bq_table)
 bq_loader(combined3, bq_dataset, bq_table)
-
+'''
 
 
 

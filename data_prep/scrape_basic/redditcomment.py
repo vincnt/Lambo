@@ -23,7 +23,6 @@ class RedditComment:
         self.parent_id = parent_id
         self.tokenisedtext = ''
         self.coinsmentioned = []
-        self.texttokensentiment = 0
         self.sentiment = 0
 
     def tokenisetext(self):
@@ -43,13 +42,14 @@ class RedditComment:
             sent = float(sent / count)
         self.sentiment = sent
 
-    def main(self):
+    def execute(self):
         self.tokenisetext()
         self.calculatesent()
 
     def printer(self):
         print(self.coinsmentioned)
         print(self.text)
+        print(self.tokenisedtext)
         print('ups: ' + str(self.ups))
         print('sent: ' + str(self.sentiment))
         print('subreddit: ' + str(self.subreddit))
@@ -59,6 +59,7 @@ class RedditComment:
 
 
 if __name__ == "__main__":
-    testcomment = RedditComment(1, 'bob', 123, 'cant believe nano coin is still around! why do people even believe in it ', 2, 'altcoin', 1520516713, 123)
-    testcomment.calculatesent()
+    testcomment = RedditComment(1, 'bob', 123, 'cant believe nano coin is still around! why do people even believe in it. I hate it. ', 2, 'altcoin', 1520516713, 123)
+    testcomment.execute()
     print(testcomment.sentiment)
+    testcomment.printer()
