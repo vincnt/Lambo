@@ -8,23 +8,39 @@ import time
 import asyncio
 import aiohttp
 import os
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
-# locations of existing list of coins
-coinlist_location_online = "https://raw.githubusercontent.com/vincnt/Lambo/master/utils/coinlist.json"
-coinlist_location_local = "/home/vincent/Projects/Crypto/Lambo/utils/coinlist.json"
 
-# credentials to connect to Google auth - for local runs.
-local_google_credentials = '/home/vincent/Lambo-89cff3bde0ba.json'
+controls_location = "https://raw.githubusercontent.com/vincnt/Lambo/master/data_prep/market_fetch/fetch_controls.json"
 
-# BigQuery Setup
-bq_dataset = "Market_Fetch"
-bq_table = "raw_prices"
 
-# Other parameters
-coinlist_rank_filter = 500   # Only return results for those with rank below this (for testing / saving resources)
-fetch_timeout = 25  # timeout for fetching coin price
+# initialise variables to github controls file
+def read_controls():
+    with urllib.request.urlopen(controls_location) as url:
+        data = json.loads(url.read().decode())
+        return data
+
+
+try:
+    controls = read_controls()
+    coinlist_location_online = controls["coinlist_link"]
+    bq_dataset = controls["bq_dataset"]
+    bq_table = controls["bq_table"]
+    coinlist_rank_filter = int(controls["coin_rank_limit"])
+    fetch_timeout = int(controls["timeout"]) # timeout for fetching coin price
+    fetch_retry_count = int(controls["retries"])  # how many times to retry fetching prices in one fetch call
+except Exception as e:
+    coinlist_location_online = "https://raw.githubusercontent.com/vincnt/Lambo/master/utils/coinlist.json"
+    bq_dataset = "Market_Fetch"
+    bq_table = "raw_prices"
+    coinlist_rank_filter = 400   # Only return results for those with rank below this (for testing / saving resources)
+    fetch_timeout = 20  # timeout for fetching coin price
+    fetch_retry_count = 5  # how many times to retry fetching prices in one fetch call
+
+# other parameters
 fetch_price_params = "BTC,USD,ETH"  # prices returned from coin fetch
-fetch_retry_count = 5  # how many times to retry fetching prices in one fetch call
+coinlist_location_local = "/home/vincent/Projects/Crypto/Lambo/utils/coinlist.json"
+local_google_credentials = '/home/vincent/Lambo-89cff3bde0ba.json'
 
 
 # read coin file from online location (github)
@@ -36,7 +52,7 @@ def read_current():
 
 # read coin file from local location
 def read_local():
-    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = local_google_credentials
+    #os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = local_google_credentials
     with open(coinlist_location_local) as currentlist:
         data = json.load(currentlist)
         return data
@@ -50,7 +66,7 @@ def bq_loader(rows, datasetname, tablename):
     table = bigquery_client.get_table(table_ref)
     errors = bigquery_client.insert_rows(table, rows)
     if not errors:
-        print('Loaded succesfully into {}:{}'.format(datasetname, tablename))
+        print('Loaded succesfully into {}:{} on {}'.format(datasetname, tablename, datetime.datetime.utcnow()))
     else:
         print('Errors:')
         pprint.pprint(errors)
@@ -65,7 +81,7 @@ def getepochtime():
 
 # main_aws fetch function
 def fetch_runner(coinlist):
-    loop = asyncio.get_event_loop()
+    loop = asyncio.new_event_loop()
     print("pre filtered coinlist length: " + str(len(coinlist)))
     cc_coinlist = cc_coinlistfilter(coinlist)
     print("filtered coinlist length: " + str(len(cc_coinlist)) + "\n")
@@ -97,7 +113,7 @@ def fetch_loop(loop, fetch_list):
             fetch_all(session, fetch_list))
     success_list, failed_list = fetch_success_filter(fetch_results,fetch_list)
     print(str(len(failed_list)) + " failed:")
-    print(failed_list)
+    #print(failed_list)
     print("\n")
     return success_list, failed_list
 
@@ -140,7 +156,7 @@ def fetch_success_filter(raw_fetch, fetch_list):
         if y not in nameonly_success_list:
             failed_list.append(y)
     print(str(len(success_list))+" returned succesfully:")
-    print(success_list)
+    #print(success_list)
     return success_list, failed_list
 
 
@@ -165,15 +181,20 @@ def fetch_to_bq_format(success_list, coinlist):
 
 
 def main():
+    print("\nRunning...\n")
     coinlist = read_current()
     fetchresults = fetch_runner(coinlist)
     bqprices = fetch_to_bq_format(fetchresults, coinlist)
     print("\nfinal price array")
-    print(bqprices)
+    #print(bqprices)
     bq_loader(bqprices, bq_dataset, bq_table)
     return 'yay'
 
 
-os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = local_google_credentials
-main()
+# os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = local_google_credentials
+scheduler = AsyncIOScheduler()
+scheduler.add_job(main, 'interval', seconds=120)
+scheduler.start()
+asyncio.get_event_loop().run_forever()
+
 
