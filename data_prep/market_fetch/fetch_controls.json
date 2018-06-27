@@ -1,6 +1,6 @@
 {
   "timeout": "15",
-  "coin_rank_limit": "300",
+  "coin_rank_limit": "200",
   "retries": "8",
   "coinlist_link": "https://raw.githubusercontent.com/vincnt/Lambo/master/utils/coinlist.json",
   "bq_dataset": "Market_Fetch",
