@@ -6,9 +6,11 @@ from google.oauth2 import service_account
 
 local_google_credentials = '/home/vincent/Lambo-89cff3bde0ba.json'
 
-
-os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = local_google_credentials
-client = bigquery.Client()
+try:
+    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = local_google_credentials
+    client = bigquery.Client()
+except:
+    client = bigquery.Client()
 
 
 def list_datasets():
@@ -31,15 +33,15 @@ def list_tables(dataset):
         print('\t{}'.format(table.table_id))
 
 
-def get_table(dataset, table):
+def get_table_meta(dataset, table):
     dataset_id = dataset
     table_id = table
     dataset_ref = client.dataset(dataset_id)
     table_ref = dataset_ref.table(table_id)
     table = client.get_table(table_ref)
     pprint.pprint(table.schema)
-    print(table.description)
-    print(table.num_rows)
+    print("Table Description: " + str(table.description))
+    print("Number of rows: " + str(table.num_rows))
 
 
 def tail_rows(dataset_id, table_id):
@@ -75,7 +77,7 @@ def insertrows(rows_to_insert,dataset_id,table_id):
 # SELECT * FROM [lambo-192519:Market_Fetch.raw_prices] WHERE CMC_ID = "revain" ORDER BY Timestamp DESC LIMIT 100
 def bqquery():
     query = """
-        SELECT CMC_ID, CC_USD_PRICE
+        SELECT CMC_ID, CC_USD_PRICE, Timestamp
         FROM `lambo-192519.Market_Fetch.raw_prices`
         WHERE CMC_ID = @cmcid
         ORDER BY Timestamp DESC
@@ -92,7 +94,7 @@ def bqquery():
 
     # Print the results
     for row in results:
-        print('{}: {}'.format(row.CMC_ID, row.CC_USD_PRICE))
+        print('{}: {} \t {}'.format(row.CMC_ID, row.CC_USD_PRICE, row.Timestamp))
 
     assert query_job.state == 'DONE'
 
@@ -100,7 +102,7 @@ def bqquery():
 def bqmain():
     #list_datasets()
     #list_tables("Market_Fetch")
-    #get_table("Market_Fetch", "raw_prices")
+    get_table_meta("Market_Fetch", "raw_prices")
     #rowz = tail_rows("Market_Fetch", "raw_prices")
     #prettyprintrows(rowz)
     bqquery()

@@ -4,5 +4,6 @@
   "retries": "8",
   "coinlist_link": "https://raw.githubusercontent.com/vincnt/Lambo/master/utils/coinlist.json",
   "bq_dataset": "Market_Fetch",
-  "bq_table": "raw_prices"
+  "bq_table": "raw_prices",
+  "repeat_interval": "60"
 }

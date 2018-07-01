@@ -29,6 +29,7 @@ try:
     coinlist_rank_filter = int(controls["coin_rank_limit"])
     fetch_timeout = int(controls["timeout"]) # timeout for fetching coin price
     fetch_retry_count = int(controls["retries"])  # how many times to retry fetching prices in one fetch call
+    oneloopruntime = int(controls["repeat_interval"])  # interval to run script in seconds
 except Exception as e:
     coinlist_location_online = "https://raw.githubusercontent.com/vincnt/Lambo/master/utils/coinlist.json"
     bq_dataset = "Market_Fetch"
@@ -36,6 +37,7 @@ except Exception as e:
     coinlist_rank_filter = 400   # Only return results for those with rank below this (for testing / saving resources)
     fetch_timeout = 20  # timeout for fetching coin price
     fetch_retry_count = 5  # how many times to retry fetching prices in one fetch call
+    oneloopruntime = 120  # in seconds
 
 # other parameters
 fetch_price_params = "BTC,USD,ETH"  # prices returned from coin fetch
@@ -56,20 +58,6 @@ def read_local():
     with open(coinlist_location_local) as currentlist:
         data = json.load(currentlist)
         return data
-
-
-# load rows into Big Query
-def bq_loader(rows, datasetname, tablename):
-    bigquery_client = bigquery.Client()
-    dataset_ref = bigquery_client.dataset(datasetname)
-    table_ref = dataset_ref.table(tablename)
-    table = bigquery_client.get_table(table_ref)
-    errors = bigquery_client.insert_rows(table, rows)
-    if not errors:
-        print('Loaded succesfully into {}:{} on {}'.format(datasetname, tablename, datetime.datetime.utcnow()))
-    else:
-        print('Errors:')
-        pprint.pprint(errors)
 
 
 # return current epoch time
@@ -180,6 +168,20 @@ def fetch_to_bq_format(success_list, coinlist):
     return finalprices
 
 
+# load rows into Big Query
+def bq_loader(rows, datasetname, tablename):
+    bigquery_client = bigquery.Client()
+    dataset_ref = bigquery_client.dataset(datasetname)
+    table_ref = dataset_ref.table(tablename)
+    table = bigquery_client.get_table(table_ref)
+    errors = bigquery_client.insert_rows(table, rows)
+    if not errors:
+        print('Loaded succesfully into {}:{} on {}'.format(datasetname, tablename, datetime.datetime.utcnow()))
+    else:
+        print('Errors:')
+        pprint.pprint(errors)
+
+
 def main():
     print("\nRunning...\n")
     coinlist = read_current()
@@ -193,7 +195,7 @@ def main():
 
 # os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = local_google_credentials
 scheduler = AsyncIOScheduler()
-scheduler.add_job(main, 'interval', seconds=120)
+scheduler.add_job(main, 'interval', seconds=oneloopruntime)
 scheduler.start()
 asyncio.get_event_loop().run_forever()
 
