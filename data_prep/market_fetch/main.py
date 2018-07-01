@@ -27,11 +27,12 @@ try:
     bq_dataset = controls["bq_dataset"]
     bq_table = controls["bq_table"]
     coinlist_rank_filter = int(controls["coin_rank_limit"])
-    fetch_timeout = int(controls["timeout"]) # timeout for fetching coin price
+    fetch_timeout = int(controls["timeout"])  # timeout for fetching coin price
     fetch_retry_count = int(controls["retries"])  # how many times to retry fetching prices in one fetch call
     oneloopruntime = int(controls["repeat_interval"])  # interval to run script in seconds
     scheduler_maxinstances = int(controls["scheduler_maxinstances"])
 except Exception as e:
+    print("failed to read online coinlist, using default variables")
     coinlist_location_online = "https://raw.githubusercontent.com/vincnt/Lambo/master/utils/coinlist.json"
     bq_dataset = "Market_Fetch"
     bq_table = "raw_prices"
@@ -196,10 +197,8 @@ def main():
     return 'yay'
 
 
-try:
-    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = local_google_credentials
-except:
-    print("local cred failed")
+#os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = local_google_credentials  # only for running on local machine
+
 scheduler = AsyncIOScheduler({'apscheduler.job_defaults.max_instances': scheduler_maxinstances})
 scheduler.add_job(main, 'interval', seconds=oneloopruntime)
 scheduler.start()
