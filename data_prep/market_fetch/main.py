@@ -30,6 +30,7 @@ try:
     fetch_timeout = int(controls["timeout"]) # timeout for fetching coin price
     fetch_retry_count = int(controls["retries"])  # how many times to retry fetching prices in one fetch call
     oneloopruntime = int(controls["repeat_interval"])  # interval to run script in seconds
+    scheduler_maxinstances = int(controls["scheduler_maxinstances"])
 except Exception as e:
     coinlist_location_online = "https://raw.githubusercontent.com/vincnt/Lambo/master/utils/coinlist.json"
     bq_dataset = "Market_Fetch"
@@ -38,6 +39,7 @@ except Exception as e:
     fetch_timeout = 20  # timeout for fetching coin price
     fetch_retry_count = 5  # how many times to retry fetching prices in one fetch call
     oneloopruntime = 120  # in seconds
+    scheduler_maxinstances = 3
 
 # other parameters
 fetch_price_params = "BTC,USD,ETH"  # prices returned from coin fetch
@@ -183,18 +185,22 @@ def bq_loader(rows, datasetname, tablename):
 
 
 def main():
-    print("\nRunning...\n")
+    print("\nRunning...\n Start Time: " + str(datetime.datetime.utcnow()))
     coinlist = read_current()
     fetchresults = fetch_runner(coinlist)
     bqprices = fetch_to_bq_format(fetchresults, coinlist)
     print("\nfinal price array")
     #print(bqprices)
     bq_loader(bqprices, bq_dataset, bq_table)
+    print("End Time: " + str(datetime.datetime.utcnow()))
     return 'yay'
 
 
-# os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = local_google_credentials
-scheduler = AsyncIOScheduler()
+try:
+    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = local_google_credentials
+except:
+    print("local cred failed")
+scheduler = AsyncIOScheduler({'apscheduler.job_defaults.max_instances': scheduler_maxinstances})
 scheduler.add_job(main, 'interval', seconds=oneloopruntime)
 scheduler.start()
 asyncio.get_event_loop().run_forever()
