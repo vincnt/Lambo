@@ -2,7 +2,7 @@ from google.cloud import bigquery
 import os
 import pprint
 from google.oauth2 import service_account
-
+from pandas.io import gbq
 
 local_google_credentials = '/home/vincent/Lambo-89cff3bde0ba.json'
 
@@ -75,7 +75,7 @@ def insertrows(rows_to_insert,dataset_id,table_id):
 
 
 # SELECT * FROM [lambo-192519:Market_Fetch.raw_prices] WHERE CMC_ID = "revain" ORDER BY Timestamp DESC LIMIT 100
-def bqquery():
+def bqqueryquery(cmc_id):
     query = """
         SELECT CMC_ID, CC_USD_PRICE, Timestamp
         FROM `lambo-192519.Market_Fetch.raw_prices`
@@ -84,28 +84,43 @@ def bqquery():
         LIMIT 10;
     """
     query_params = [
-        bigquery.ScalarQueryParameter('cmcid', 'STRING', 'revain'),
+        bigquery.ScalarQueryParameter('cmcid', 'STRING', cmc_id),
     ]
     job_config = bigquery.QueryJobConfig()
     job_config.query_parameters = query_params
     query_job = client.query(
         query, job_config=job_config)  # API request - starts the query
     results = query_job.result()  # Waits for job to complete.
+    print(type(results))
 
     # Print the results
     for row in results:
+        print(row)
+        print(type(row))
         print('{}: {} \t {}'.format(row.CMC_ID, row.CC_USD_PRICE, row.Timestamp))
 
     assert query_job.state == 'DONE'
+
+def bqtopd():
+    query = """
+            SELECT CMC_ID, CC_USD_PRICE, Timestamp
+            FROM Market_Fetch.raw_prices
+            WHERE CMC_ID = 'revain'
+            ORDER BY Timestamp DESC
+            LIMIT 10;
+        """
+    data_frame = gbq.read_gbq(query, "lambo-192519")
+    print(data_frame.head())
 
 
 def bqmain():
     #list_datasets()
     #list_tables("Market_Fetch")
-    get_table_meta("Market_Fetch", "raw_prices")
+    #get_table_meta("Market_Fetch", "raw_prices")
     #rowz = tail_rows("Market_Fetch", "raw_prices")
     #prettyprintrows(rowz)
-    bqquery()
+    #bqqueryquery("revain")
+    bqtopd()
 
 
 bqmain()
