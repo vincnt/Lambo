@@ -1,4 +1,3 @@
-import requests
 import json
 import pprint
 import urllib.request
@@ -7,22 +6,31 @@ import datetime
 import time
 import asyncio
 import aiohttp
-import os
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
+'''
+This script currently fetches price data from Cryptocompare. 
+It gets prices for each coin in BTC, USD and ETH and then saves them to BigQuery.
+'''
 
+# for easy updating of fetching parameters
 controls_location = "https://raw.githubusercontent.com/vincnt/Lambo/master/data_prep/market_fetch/fetch_controls.json"
+fetch_price_params = "BTC,USD,ETH"  # prices returned from coin fetch
+coinlist_location_local = "/home/vincent/Projects/Crypto/Lambo/utils/coinlist.json"
+local_google_credentials = '/home/vincent/Lambo-89cff3bde0ba.json'
+cc_url = "https://min-api.cryptocompare.com/data/price"  # api url for cryptocompare
 
 
-# initialise variables to github controls file
-def read_controls():
+# helper for reading the online control parameters so that they can be tweaked from github
+def read_controls_helper():
     with urllib.request.urlopen(controls_location) as url:
         data = json.loads(url.read().decode())
         return data
 
 
+#  Try to import the parameters from online file, if not, set some default values.
 try:
-    controls = read_controls()
+    controls = read_controls_helper()
     coinlist_location_online = controls["coinlist_link"]
     bq_dataset = controls["bq_dataset"]
     bq_table = controls["bq_table"]
@@ -42,29 +50,25 @@ except Exception as e:
     oneloopruntime = 120  # in seconds
     scheduler_maxinstances = 3
 
-# other parameters
-fetch_price_params = "BTC,USD,ETH"  # prices returned from coin fetch
-coinlist_location_local = "/home/vincent/Projects/Crypto/Lambo/utils/coinlist.json"
-local_google_credentials = '/home/vincent/Lambo-89cff3bde0ba.json'
-
 
 # read coin file from online location (github)
-def read_current():
+def read_online_coinlist():
     with urllib.request.urlopen(coinlist_location_online) as url:
         data = json.loads(url.read().decode())
         return data
 
 
 # read coin file from local location
-def read_local():
-    #os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = local_google_credentials
+def read_local_coinlist():
+    import os
+    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = local_google_credentials
     with open(coinlist_location_local) as currentlist:
         data = json.load(currentlist)
         return data
 
 
 # return current epoch time
-def getepochtime():
+def get_epoch_time():
     dts = datetime.datetime.utcnow()
     epochtime = round(time.mktime(dts.timetuple()) + dts.microsecond/1e6)
     return epochtime
@@ -74,7 +78,7 @@ def getepochtime():
 def fetch_runner(coinlist):
     loop = asyncio.new_event_loop()
     print("pre filtered coinlist length: " + str(len(coinlist)))
-    cc_coinlist = cc_coinlistfilter(coinlist)
+    cc_coinlist = filter_coinlist_rank_cc(coinlist)
     print("filtered coinlist length: " + str(len(cc_coinlist)) + "\n")
     success_list, failed_list = fetch_loop(loop, cc_coinlist)
     for x in range(fetch_retry_count - 1):
@@ -88,7 +92,7 @@ def fetch_runner(coinlist):
 
 
 # filter raw conlist into specific parameters eg. only those with CC_symbol, and those with rank <200
-def cc_coinlistfilter(original_list):
+def filter_coinlist_rank_cc(original_list):
     finallist = []
     for x in original_list:
         if "CC_symbol" in original_list[x]:
@@ -102,9 +106,8 @@ def fetch_loop(loop, fetch_list):
     with aiohttp.ClientSession(loop=loop) as session:
         fetch_results = loop.run_until_complete(
             fetch_all(session, fetch_list))
-    success_list, failed_list = fetch_success_filter(fetch_results,fetch_list)
+    success_list, failed_list = filter_fetch_success(fetch_results, fetch_list)
     print(str(len(failed_list)) + " failed:")
-    #print(failed_list)
     print("\n")
     return success_list, failed_list
 
@@ -121,16 +124,15 @@ async def fetch_all(session, coins):
 # async function to fetch individual coin, called by fetch_all
 async def fetch(session, coin):
     params = {"fsym": coin, "tsyms": fetch_price_params}
-    url = "https://min-api.cryptocompare.com/data/price"
     with aiohttp.Timeout(fetch_timeout):
-        async with session.get(url, params=params) as response:
+        async with session.get(cc_url, params=params) as response:
             prices = await response.json()
-            result = {"CC_price": prices, "CC_symbol": coin, "Time": getepochtime()}
+            result = {"CC_price": prices, "CC_symbol": coin, "Time": get_epoch_time()}
             return result
 
 
 # return list of fetches that returned succesfully (no timeout or rate limit exceeded), and return those that failed
-def fetch_success_filter(raw_fetch, fetch_list):
+def filter_fetch_success(raw_fetch, fetch_list):
     success_list = []
     nameonly_success_list=[]
     failed_list = []
@@ -152,7 +154,7 @@ def fetch_success_filter(raw_fetch, fetch_list):
 
 
 # prepares the final fetched results for bigquery insertion
-def fetch_to_bq_format(success_list, coinlist):
+def format_fetch_for_bq(success_list, coinlist):
     finalprices = []
     for x in success_list:
         y = {
@@ -187,17 +189,14 @@ def bq_loader(rows, datasetname, tablename):
 
 def main():
     print("\nRunning...\n Start Time: " + str(datetime.datetime.utcnow()))
-    coinlist = read_current()
+    coinlist = read_local_coinlist() # change to read_local_coinlist if local machine
     fetchresults = fetch_runner(coinlist)
-    bqprices = fetch_to_bq_format(fetchresults, coinlist)
+    bqprices = format_fetch_for_bq(fetchresults, coinlist)
     print("\nfinal price array")
-    #print(bqprices)
     bq_loader(bqprices, bq_dataset, bq_table)
     print("End Time: " + str(datetime.datetime.utcnow()))
     return 'yay'
 
-
-#os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = local_google_credentials  # only for running on local machine
 
 scheduler = AsyncIOScheduler({'apscheduler.job_defaults.max_instances': scheduler_maxinstances})
 scheduler.add_job(main, 'interval', seconds=oneloopruntime)
