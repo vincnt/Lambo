@@ -22,5 +22,5 @@ pytz==2017.3
 requests==2.18.4
 requests-oauthlib==1.0.0
 rsa==3.4.2
-urllib3==1.22
+urllib3==1.24.2
 yarl==1.1.0
