@@ -2,7 +2,7 @@ aiohttp==2.3.9
 APScheduler==3.5.1
 async-timeout==2.0.0
 cachetools==2.0.1
-certifi==2018.1.18
+certifi==2022.12.7
 chardet==3.0.4
 docutils==0.14
 google-api-core==0.1.4
